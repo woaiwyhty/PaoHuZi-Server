@@ -8,6 +8,7 @@ var ROOM_PRI_KEY = "~!@#$(*&^%$&";
 var LOCAL_IP = 'localhost';
 
 var socket_service = require("./server");
+const ON_DEATH = require('death');
 
 var hall_server_config = {
     HALL_IP:HALL_IP,
@@ -17,5 +18,9 @@ var hall_server_config = {
     ACCOUNT_PRI_KEY:ACCOUNT_PRI_KEY,
     ROOM_PRI_KEY:ROOM_PRI_KEY
 };
+
+ON_DEATH(function(signal, err) {
+    socket_service.close_connection();
+});
 
 socket_service.start(hall_server_config);

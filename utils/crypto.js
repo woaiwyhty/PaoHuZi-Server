@@ -1,4 +1,4 @@
-var crypto = require('utils/crypto');
+var crypto = require('crypto');
 
 exports.md5 = function (content) {
 	var md5 = crypto.createHash('md5');
