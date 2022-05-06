@@ -9,7 +9,7 @@ const client = redis_server.createClient({
     port: '6379' // 默认端口
 });
 
-console.log(crypto.md5("wyhty2627"));
+// console.log(crypto.md5("wyhty2627"));
 
 client.connect().then(r => {
     if (r) {
