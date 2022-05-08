@@ -2,8 +2,12 @@
 
 function generate_room_id() {
     let roomId = 0;
-    for(let i = 0; i < 5; ++i){
-        roomId = roomId * 10 + Math.floor(Math.random()*10);
+    for(let i = 0; i < 5; ++i) {
+        let x = Math.floor(Math.random()*10);
+        if (x === 0 && i === 0) {
+            x = 5;
+        }
+        roomId = roomId * 10 + x;
     }
     return roomId;
 }
@@ -47,6 +51,7 @@ exports.join_room = (username, room_id) => {
     if (!exports.details.has(room_id)) {
         return {
             status: false,
+            errcode: 1,
             msg: "room does not exist!",
         }
     }
@@ -55,6 +60,7 @@ exports.join_room = (username, room_id) => {
     if (info.num_of_players >= 3) {
         return {
             status: false,
+            errcode: 2,
             msg: "room full!",
         }
     }
@@ -67,6 +73,11 @@ exports.join_room = (username, room_id) => {
     }
     exports.details.get(room_id).players[i] = username;
     console.log(exports.details.get(room_id));
+    return {
+        status: true,
+        errcode: 0,
+        msg: "ok",
+    }
 };
 
 

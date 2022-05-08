@@ -1,4 +1,6 @@
 let express = require('express');
+const { Server } = require("socket.io");
+
 let io = null, httpServer = null, config = null, httpHandler = null;
 let app = express();
 const db = require('./utils/db');
@@ -22,7 +24,7 @@ exports.start = function(conf, mgr){
     httpServer = require('http').createServer(app);
     httpHandler = require('./utils/httputil');
 
-    io = require('socket.io')(httpServer);
+    io = new Server(httpServer);
 
     app.get('/isServerOn', function(req, res){
         console.log(req.query);
@@ -50,6 +52,8 @@ exports.start = function(conf, mgr){
                 let result = roomManager.create_room(req.query.username, req.query.num_of_games);
                 if (result.status === true) {
                     roomManager.join_room(req.query.username, result.room_id);
+                    console.log("successfully created room, ", result.room_id);
+
                     httpHandler.send(res, 0, "ok", { room_id: result.room_id });
                 } else {
                     httpHandler.send(res, -1, result.msg, {});
@@ -69,7 +73,7 @@ exports.start = function(conf, mgr){
             query('token').exists(),
             query('token').isLength({ min: 15, max: 30 }),
             query('room_id').exists(),
-            query('room_id').isInt({ min: 5, max: 5 }),
+            query('room_id').isInt({ min: 10000, max: 99999 }),
         ],
         function(req, res){
             try {
@@ -80,12 +84,12 @@ exports.start = function(conf, mgr){
                 if (accountManager.is_user_already_in_room(req.query.username)) {
                     throw new Error('already in another room');
                 }
-                let result = roomManager.join_room(req.query.username, req.query.room_id);
+                let result = roomManager.join_room(req.query.username, parseInt(req.query.room_id));
                 if (result.status === true) {
                     accountManager.join_room(req.query.username, req.query.room_id);
                     httpHandler.send(res, 0, "ok", {});
                 } else {
-                    httpHandler.send(res, -1, result.msg, {});
+                    httpHandler.send(res, result.errcode, result.msg, {});
                 }
             } catch (error) {
                 console.log(error);
