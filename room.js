@@ -14,6 +14,7 @@ function generate_room_id() {
 
 exports.current_num_of_rooms = 0;
 exports.details = new Map();
+let user_room_map = new Map();
 
 exports.create_room = (username, rounds) => {
     // todo: check if a user created too many rooms recently
@@ -21,6 +22,14 @@ exports.create_room = (username, rounds) => {
         return {
             status: false,
             msg: "too many rooms!",
+        }
+    }
+
+    if (user_room_map.has(username)) {
+        return {
+            status: false,
+            errcode: 3,
+            msg: "already in another room",
         }
     }
 
@@ -40,6 +49,7 @@ exports.create_room = (username, rounds) => {
         cancel_room_deadline_if_not_start: 180,
     });
 
+    exports.current_num_of_rooms += 1;
     return {
         status: true,
         msg: "ok",
@@ -47,8 +57,27 @@ exports.create_room = (username, rounds) => {
     }
 };
 
-exports.join_room = (username, room_id) => {
-    if (!exports.details.has(room_id)) {
+exports.check_room_exists = (room_id) => {
+    return exports.details.has(room_id);
+};
+
+exports.check_user_in_room = (username) => {
+    return user_room_map.has(username);
+};
+
+exports.check_room_full = (room_id) => {
+    return exports.details.get(room_id).num_of_players >= 3;
+};
+
+exports.join_room = (username, room_id, ip=null) => {
+    if (exports.check_user_in_room(username)) {
+        return {
+            status: false,
+            errcode: 3,
+            msg: "already in another room",
+        }
+    }
+    if (!exports.check_room_exists(room_id)) {
         return {
             status: false,
             errcode: 1,
@@ -71,13 +100,33 @@ exports.join_room = (username, room_id) => {
             break;
         }
     }
-    exports.details.get(room_id).players[i] = username;
-    console.log(exports.details.get(room_id));
+    exports.details.get(room_id).players[i] = {
+        username: username,
+        ip: ip,
+        score: 0,
+        online: true,
+        ready: true
+    };
+    exports.details.get(room_id).num_of_players += 1;
+    user_room_map.set(username, room_id);
     return {
         status: true,
         errcode: 0,
         msg: "ok",
+        seat_id: i,
     }
+};
+
+exports.get_other_players = (username, room_id) => {
+    let i = 0;
+    let ids = [];
+    let info = exports.details.get(room_id);
+    for (i = 0; i < 3; ++i) {
+        if (info.players[i] !== null && info.players[i].user !== username) {
+            ids.push(username);
+        }
+    }
+    return ids;
 };
 
 

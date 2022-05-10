@@ -1,7 +1,7 @@
 let express = require('express');
 const { Server } = require("socket.io");
 
-let io = null, httpServer = null, config = null, httpHandler = null;
+let io = null, httpServer = null, config = null, httpHandler = null, userSocketMap = new Map();
 let app = express();
 const db = require('./utils/db');
 const accountManager = require('./account');
@@ -23,8 +23,12 @@ exports.start = function(conf, mgr){
 
     httpServer = require('http').createServer(app);
     httpHandler = require('./utils/httputil');
+    io = require('socket.io')(httpServer);
 
-    io = new Server(httpServer);
+
+    httpServer.listen(config.CLEINT_PORT, config.HALL_IP, () => {
+        console.log("listen on ", config.HALL_IP, config.CLEINT_PORT);
+    });
 
     app.get('/isServerOn', function(req, res){
         console.log(req.query);
@@ -46,12 +50,9 @@ exports.start = function(conf, mgr){
                 if (!accountManager.validate_online(req.query.username, req.query.token)) {
                     throw new Error('invalid token');
                 }
-                if (accountManager.is_user_already_in_room(req.query.username)) {
-                    throw new Error('already in another room');
-                }
+
                 let result = roomManager.create_room(req.query.username, req.query.num_of_games);
                 if (result.status === true) {
-                    roomManager.join_room(req.query.username, result.room_id);
                     console.log("successfully created room, ", result.room_id);
 
                     httpHandler.send(res, 0, "ok", { room_id: result.room_id });
@@ -81,15 +82,14 @@ exports.start = function(conf, mgr){
                 if (!accountManager.validate_online(req.query.username, req.query.token)) {
                     throw new Error('invalid token');
                 }
-                if (accountManager.is_user_already_in_room(req.query.username)) {
-                    throw new Error('already in another room');
-                }
-                let result = roomManager.join_room(req.query.username, parseInt(req.query.room_id));
-                if (result.status === true) {
-                    accountManager.join_room(req.query.username, req.query.room_id);
-                    httpHandler.send(res, 0, "ok", {});
+                if (roomManager.check_user_in_room(req.query.username)) {
+                    httpHandler.send(res, 3, "user already in another room", { room_id: req.query.room_id });
+                } else if (!roomManager.check_room_exists(req.query.room_id)) {
+                    httpHandler.send(res, 1, "room does not exist!", { room_id: req.query.room_id });
+                } else if (roomManager.check_room_full(req.query.room_id)) {
+                    httpHandler.send(res, 2, "room full!", { room_id: req.query.room_id });
                 } else {
-                    httpHandler.send(res, result.errcode, result.msg, {});
+                    httpHandler.send(res, 0, "ok", { room_id: req.query.room_id });
                 }
             } catch (error) {
                 console.log(error);
@@ -146,7 +146,106 @@ exports.start = function(conf, mgr){
             }
         });
 
-    app.listen(config.CLEINT_PORT, config.HALL_IP);
+    io.on('connection', (socket) => {
+        console.log('a user connected');
+        let verify_data = (data) => {
+            return data.token && data.username;
+        };
+
+        let broadcast_information = (message, data, userlists) => {
+            for (let i = 0; i < userlists.length; ++i) {
+                if (userSocketMap.has(userlists[i].username)) {
+                    userSocketMap.get(userlists[i].username).emit(message, data);
+                }
+            }
+        };
+
+        socket.on('login', (data) => {
+            data = JSON.parse(data);
+            // login and join the room
+            if (!verify_data(data)) {
+                socket.emit('login_result', { errcode: -1, errmsg: "invalid token" });
+                return;
+            }
+            if (!data.room_id) {
+                socket.emit('login_result', { errcode: -1, errmsg: "invalid room id" });
+                return;
+            }
+            if (!accountManager.validate_online(data.username, data.token)) {
+                socket.emit('login_result', { errcode: -1, errmsg: "user not online" });
+                return;
+            }
+
+            let join_result = roomManager.join_room(data.username, data.room_id, socket.handshake.address);
+            if (!join_result.status) {
+                socket.emit('login_result', { errcode: -1, errmsg: join_result.msg });
+                return;
+            }
+
+            socket.username = data.username;
+            socket.token = data.token;
+            socket.room_id = data.room_id;
+            socket.ready = true;
+            socket.score = 0;
+            socket.online = true;
+            socket.ip = socket.handshake.address;
+            socket.seat_id = join_result.seat_id;
+            socket.already_exited = false;
+
+            userSocketMap.set(socket.username, socket);
+            let other_player = roomManager.get_other_players(data.username, data.room_id);
+            broadcast_information('new_player_entered_room', {
+                username: data.username,
+                ready: true,
+                score: 0,
+            }, other_player);
+
+            socket.emit('login_result', {
+                errcode: 0,
+                errmsg: "ok",
+                room_id: data.room_id,
+                seat_id: join_result.seat_id,
+                other_players: other_player, // todo: remove IP field for security purpose
+            });
+        });
+
+
+        socket.on('disconnect', function(data) {
+            // disconnect from the game server, thus exit from the room.
+            let userId = socket.username;
+            if (!userId || socket.already_exited === true) {
+                return;
+            }
+
+            if (userSocketMap.get(userId) !== socket){
+                return;
+            }
+
+            var broadcast_data = {
+                username: userId,
+                online: false
+            };
+
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+
+            broadcast_information('player_offline', broadcast_data, other_player);
+
+            userSocketMap.del(userId);
+            socket.username = null;
+        });
+
+        socket.on('game_ping', function(data){
+            // heartbeat
+            let userId = socket.userId;
+            if (!userId){
+                return;
+            }
+            socket.emit('game_pong');
+        });
+    });
+
+
+
 };
 
 exports.close_connection = function() {
