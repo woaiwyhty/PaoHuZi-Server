@@ -117,6 +117,26 @@ exports.join_room = (username, room_id, ip=null) => {
     }
 };
 
+exports.delete_room = (room_id) => {
+    exports.details.delete(parseInt(room_id));
+};
+
+exports.leave_room = (username, room_id) => {
+    console.log("leave room is called ", username);
+    user_room_map.delete(username);
+    let info = exports.details.get(room_id);
+    let i = 0;
+    for (i = 0; i < 3; ++i) {
+        if (info.players[i] !== null && info.players[i].username === username) {
+            info.players[i] = null;
+        }
+    }
+    info.num_of_players -= 1;
+    if (info.num_of_players === 0) {
+        exports.delete_room(room_id);
+    }
+};
+
 exports.get_other_players = (username, room_id) => {
     let i = 0;
     let ids = [];

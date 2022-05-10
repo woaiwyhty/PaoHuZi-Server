@@ -79,17 +79,18 @@ exports.start = function(conf, mgr){
         function(req, res){
             try {
                 validationResult(req).throw();
+                let room_id = parseInt(req.query.room_id);
                 if (!accountManager.validate_online(req.query.username, req.query.token)) {
                     throw new Error('invalid token');
                 }
                 if (roomManager.check_user_in_room(req.query.username)) {
-                    httpHandler.send(res, 3, "user already in another room", { room_id: req.query.room_id });
-                } else if (!roomManager.check_room_exists(req.query.room_id)) {
-                    httpHandler.send(res, 1, "room does not exist!", { room_id: req.query.room_id });
-                } else if (roomManager.check_room_full(req.query.room_id)) {
-                    httpHandler.send(res, 2, "room full!", { room_id: req.query.room_id });
+                    httpHandler.send(res, 3, "user already in another room", { room_id: room_id });
+                } else if (!roomManager.check_room_exists(room_id)) {
+                    httpHandler.send(res, 1, "room does not exist!", { room_id: room_id });
+                } else if (roomManager.check_room_full(room_id)) {
+                    httpHandler.send(res, 2, "room full!", { room_id: room_id });
                 } else {
-                    httpHandler.send(res, 0, "ok", { room_id: req.query.room_id });
+                    httpHandler.send(res, 0, "ok", { room_id: room_id });
                 }
             } catch (error) {
                 console.log(error);
@@ -210,11 +211,22 @@ exports.start = function(conf, mgr){
             });
         });
 
+        socket.on('exit', function(data) {
+            let userId = socket.username;
+            if (!userId){
+                socket.emit('exit_result', { errcode: -1 });
+                return;
+            }
+
+            socket.already_exited = true;
+            socket.emit('exit_result', { errcode: 0 });
+        });
 
         socket.on('disconnect', function(data) {
+            // todo: support relogin after accidentally offline
             // disconnect from the game server, thus exit from the room.
             let userId = socket.username;
-            if (!userId || socket.already_exited === true) {
+            if (!userId) {
                 return;
             }
 
@@ -230,7 +242,7 @@ exports.start = function(conf, mgr){
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
 
             broadcast_information('player_offline', broadcast_data, other_player);
-
+            roomManager.leave_room(socket.username, socket.room_id);
             userSocketMap.delete(userId);
             socket.username = null;
         });
