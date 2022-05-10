@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "fibers": "^5.0.1",
-    "socket.io": "^4.5.0",
+    "socket.io": "1.7.4",
     "redis": "^4.0.6",
     "mongodb": "^4.5.0",
     "death": "^1.1.0",

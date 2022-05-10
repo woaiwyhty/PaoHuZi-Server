@@ -122,8 +122,8 @@ exports.get_other_players = (username, room_id) => {
     let ids = [];
     let info = exports.details.get(room_id);
     for (i = 0; i < 3; ++i) {
-        if (info.players[i] !== null && info.players[i].user !== username) {
-            ids.push(username);
+        if (info.players[i] !== null && info.players[i].username !== username) {
+            ids.push(info.players[i]);
         }
     }
     return ids;

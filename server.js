@@ -161,6 +161,7 @@ exports.start = function(conf, mgr){
         };
 
         socket.on('login', (data) => {
+            console.log("a user trys to login  ", data);
             data = JSON.parse(data);
             // login and join the room
             if (!verify_data(data)) {
@@ -230,13 +231,14 @@ exports.start = function(conf, mgr){
 
             broadcast_information('player_offline', broadcast_data, other_player);
 
-            userSocketMap.del(userId);
+            userSocketMap.delete(userId);
             socket.username = null;
         });
 
         socket.on('game_ping', function(data){
             // heartbeat
-            let userId = socket.userId;
+            console.log('game ping msg received');
+            let userId = socket.username;
             if (!userId){
                 return;
             }
