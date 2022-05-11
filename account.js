@@ -29,11 +29,12 @@ let generate_token = () => {
     return rand() + rand();
 };
 
-exports.online = (username) => {
+exports.online = (username, nickname) => {
     // make sure username exists before making the call
     let token = generate_token();
     exports.online_users_info.set(username, {
         token: token,
+        nickname: nickname,
         lastActiveTime: Date.now(),
         current_room_id: null,
     });
@@ -46,8 +47,12 @@ exports.join_room = (username, room_id) => {
     exports.online_users_info.get(username).current_room_id = room_id;
 };
 
+exports.get_nick_name = (username) => {
+    return exports.online_users_info.get(username).nickname;
+};
 
 exports.validate_online = (username, token) => {
+    console.log("validate online   ", exports.online_users_info.get(username), username, token, typeof username);
     if (exports.online_users_info.has(username) && exports.online_users_info.get(username).token === token) {
         exports.online_users_info.get(username).lastActiveTime = Date.now();
         return true;

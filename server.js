@@ -110,7 +110,7 @@ exports.start = function(conf, mgr){
                         httpHandler.send(res, 1, "need nickname", {});
                     } else {
                         httpHandler.send(res, 0, "ok",
-                            { username: doc.username, nickname: doc.nickname, token: accountManager.online(req.query.username) });
+                            { username: doc.username, nickname: doc.nickname, token: accountManager.online(req.query.username, doc.nickname) });
                     }
                 });
             } catch (err) {
@@ -134,7 +134,7 @@ exports.start = function(conf, mgr){
                     if (doc == null) {
                         accountManager.new_guest(db.account_collection, req.query.username, req.query.nickname, (err, doc) => {
                             if (err) throw err;
-                            httpHandler.send(res, 0, "ok", { token: accountManager.online(req.query.username) });
+                            httpHandler.send(res, 0, "ok", { token: accountManager.online(req.query.username, req.query.nickname) });
                         });
 
                     } else {
@@ -178,13 +178,15 @@ exports.start = function(conf, mgr){
                 return;
             }
 
-            let join_result = roomManager.join_room(data.username, data.room_id, socket.handshake.address);
+            let nickname = accountManager.get_nick_name(data.username);
+            let join_result = roomManager.join_room(data.username, data.room_id, socket.handshake.address, nickname);
             if (!join_result.status) {
                 socket.emit('login_result', { errcode: -1, errmsg: join_result.msg });
                 return;
             }
 
             socket.username = data.username;
+            socket.nickname = nickname;
             socket.token = data.token;
             socket.room_id = data.room_id;
             socket.ready = true;
@@ -198,6 +200,9 @@ exports.start = function(conf, mgr){
             let other_player = roomManager.get_other_players(data.username, data.room_id);
             broadcast_information('new_player_entered_room', {
                 username: data.username,
+                nickname: nickname,
+                seat_id: join_result.seat_id,
+                online: true,
                 ready: true,
                 score: 0,
             }, other_player);
@@ -213,7 +218,7 @@ exports.start = function(conf, mgr){
 
         socket.on('exit', function(data) {
             let userId = socket.username;
-            if (!userId){
+            if (!userId) {
                 socket.emit('exit_result', { errcode: -1 });
                 return;
             }
@@ -236,12 +241,14 @@ exports.start = function(conf, mgr){
 
             var broadcast_data = {
                 username: userId,
-                online: false
+                seat_id: socket.seat_id,
+                online: false,
+                already_exited: socket.already_exited,
             };
 
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
 
-            broadcast_information('player_offline', broadcast_data, other_player);
+            broadcast_information('other_player_exit', broadcast_data, other_player);
             roomManager.leave_room(socket.username, socket.room_id);
             userSocketMap.delete(userId);
             socket.username = null;
@@ -249,7 +256,7 @@ exports.start = function(conf, mgr){
 
         socket.on('game_ping', function(data){
             // heartbeat
-            console.log('game ping msg received');
+            // console.log('game ping msg received');
             let userId = socket.username;
             if (!userId){
                 return;
@@ -257,9 +264,6 @@ exports.start = function(conf, mgr){
             socket.emit('game_pong');
         });
     });
-
-
-
 };
 
 exports.close_connection = function() {

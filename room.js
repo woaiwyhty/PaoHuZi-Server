@@ -69,7 +69,7 @@ exports.check_room_full = (room_id) => {
     return exports.details.get(room_id).num_of_players >= 3;
 };
 
-exports.join_room = (username, room_id, ip=null) => {
+exports.join_room = (username, room_id, ip=null, nickname="") => {
     if (exports.check_user_in_room(username)) {
         return {
             status: false,
@@ -102,6 +102,8 @@ exports.join_room = (username, room_id, ip=null) => {
     }
     exports.details.get(room_id).players[i] = {
         username: username,
+        nickname: nickname,
+        seat_id: i,
         ip: ip,
         score: 0,
         online: true,
@@ -118,6 +120,7 @@ exports.join_room = (username, room_id, ip=null) => {
 };
 
 exports.delete_room = (room_id) => {
+    exports.current_num_of_rooms -= 1;
     exports.details.delete(parseInt(room_id));
 };
 
