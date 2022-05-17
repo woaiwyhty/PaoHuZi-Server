@@ -8,6 +8,8 @@ const accountManager = require('./account');
 const { check, oneOf, query, validationResult } = require('express-validator');
 
 const roomManager = require('./room');
+const gameAlgorithm = require('./gameAlgorithm');
+
 
 app.all('*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -24,7 +26,7 @@ exports.start = function(conf, mgr){
     httpServer = require('http').createServer(app);
     httpHandler = require('./utils/httputil');
     io = require('socket.io')(httpServer);
-
+    gameAlgorithm.init_room_manager(roomManager);
 
     httpServer.listen(config.CLEINT_PORT, config.HALL_IP, () => {
         console.log("listen on ", config.HALL_IP, config.CLEINT_PORT);
@@ -188,7 +190,7 @@ exports.start = function(conf, mgr){
             socket.username = data.username;
             socket.nickname = nickname;
             socket.token = data.token;
-            socket.room_id = data.room_id;
+            socket.room_id = parseInt(data.room_id);
             socket.ready = true;
             socket.score = 0;
             socket.online = true;
@@ -214,7 +216,38 @@ exports.start = function(conf, mgr){
                 seat_id: join_result.seat_id,
                 other_players: other_player, // todo: remove IP field for security purpose
             });
+
+            socket.playerInfo = join_result.player_info;
+
+
         });
+
+        socket.on('ifGameReady', (data) => {
+            if (gameAlgorithm.check_if_game_can_start(socket.room_id)) {
+                gameAlgorithm.init_game(socket.room_id)
+                console.log(socket.playerInfo);
+                socket.emit('game_start', {
+                    errcode: 0,
+                });
+                let other_player = roomManager.get_other_players(data.username, socket.room_id);
+                broadcast_information('game_start', {
+                    errcode: 0,
+                }, other_player);
+            }
+        });
+
+        socket.on('cardsOnHand', (data) => {
+            let userId = socket.username;
+            if (!userId) {
+                socket.emit('cardsOnHand_result', { errcode: -1 });
+                return;
+            }
+
+            socket.emit('cardsOnHand_result', {
+                errcode: 0,
+                cardsOnHand: socket.playerInfo.cardsOnHand,
+            })
+        })
 
         socket.on('exit', function(data) {
             let userId = socket.username;

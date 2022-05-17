@@ -16,6 +16,10 @@ exports.current_num_of_rooms = 0;
 exports.details = new Map();
 let user_room_map = new Map();
 
+exports.get_room_info = (room_id) => {
+    return exports.details.get(room_id);
+};
+
 exports.create_room = (username, rounds) => {
     // todo: check if a user created too many rooms recently
     if (exports.current_num_of_rooms >= 1000) {
@@ -45,6 +49,7 @@ exports.create_room = (username, rounds) => {
         current_played_games: 0,
         num_of_players: 0,
         players: [ null, null, null ],
+        current_hole_cards: [],
         total_games: rounds,
         cancel_room_deadline_if_not_start: 180,
     });
@@ -103,6 +108,10 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
     exports.details.get(room_id).players[i] = {
         username: username,
         nickname: nickname,
+        cardsOnHand: [],
+        cardsDiscarded: [],
+        cardsAlreadyUsed: [],
+        xi: 0,
         seat_id: i,
         ip: ip,
         score: 0,
@@ -116,6 +125,7 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
         errcode: 0,
         msg: "ok",
         seat_id: i,
+        player_info: exports.details.get(room_id).players[i],
     }
 };
 
