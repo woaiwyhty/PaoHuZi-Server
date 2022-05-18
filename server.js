@@ -197,6 +197,7 @@ exports.start = function(conf, mgr){
             socket.ip = socket.handshake.address;
             socket.seat_id = join_result.seat_id;
             socket.already_exited = false;
+            socket.room_info = roomManager.get_room_info(data.room_id);
 
             userSocketMap.set(socket.username, socket);
             let other_player = roomManager.get_other_players(data.username, data.room_id);
@@ -218,8 +219,6 @@ exports.start = function(conf, mgr){
             });
 
             socket.playerInfo = join_result.player_info;
-
-
         });
 
         socket.on('ifGameReady', (data) => {
@@ -234,6 +233,14 @@ exports.start = function(conf, mgr){
                 broadcast_information('game_start', {
                     errcode: 0,
                 }, other_player);
+                broadcast_information('need_shoot', {
+                    errcode: 0,
+                    op_seat_id: socket.room_info.players[0].seat_id
+                }, other_player);
+                socket.emit('need_shoot', {
+                    errcode: 0,
+                    op_seat_id: socket.room_info.players[0].seat_id
+                });
             }
         });
 
@@ -255,7 +262,6 @@ exports.start = function(conf, mgr){
                 }, other_player);
             }
         });
-
 
         socket.on('cardsOnHand', (data) => {
             let userId = socket.username;

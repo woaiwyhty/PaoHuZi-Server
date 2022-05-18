@@ -52,6 +52,7 @@ exports.create_room = (username, rounds) => {
         current_hole_cards: [],
         total_games: rounds,
         cancel_room_deadline_if_not_start: 180,
+        current_on_turn_player_id: 0,
     });
 
     exports.current_num_of_rooms += 1;
