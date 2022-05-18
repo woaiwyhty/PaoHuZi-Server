@@ -239,8 +239,23 @@ exports.start = function(conf, mgr){
 
         socket.on('ti', (data) => {
             data = JSON.parse(data);
-
+            if (gameAlgorithm.check_ti_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
+                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+                let cards = ['back', 'back', 'back', 'back'];
+                if (data.needsHide === false) {
+                    cards = ['back', 'back', 'back', data.opCard];
+                }
+                socket.playerInfo.xi += gameAlgorithm.calculate_xi('ti', data.opCard);
+                broadcast_information('other_player_action', {
+                    errcode: 0,
+                    op_seat_id: socket.playerInfo.seat_id,
+                    type: 'ti',
+                    cards: cards,
+                    xi: socket.playerInfo.xi,
+                }, other_player);
+            }
         });
+
 
         socket.on('cardsOnHand', (data) => {
             let userId = socket.username;
