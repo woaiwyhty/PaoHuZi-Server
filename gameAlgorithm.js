@@ -39,9 +39,21 @@ let shuffle = (cards) => {
 };
 
 let assign_cards_when_game_start = (roomInfo) => {
+    for (let i = 1; i <= 20; ++i) {
+        let key = 'x' + i.toString();
+        if (i > 10) {
+            key = 'd' + (i - 10).toString();
+        }
+        roomInfo.players[0].cardsOnHand.set(key, 0);
+        roomInfo.players[1].cardsOnHand.set(key, 0);
+        roomInfo.players[2].cardsOnHand.set(key, 0);
+    }
     for (let i = 0; i < 61; ) {
         for (let j = 0; j < 3; ++j, ++i) {
-            roomInfo.players[j].cardsOnHand.push(roomInfo.current_hole_cards[i]);
+            roomInfo.players[j].cardsOnHand.set(
+                roomInfo.current_hole_cards[i],
+                roomInfo.players[j].cardsOnHand.get(roomInfo.current_hole_cards[i]) + 1
+            );
         }
     }
     roomInfo.current_hole_cards.splice(0, 61);
@@ -56,4 +68,8 @@ exports.init_game = (room_id) => {
     roomInfo.current_hole_cards = shuffle(generateAllCardSet());
     assign_cards_when_game_start(roomInfo);
     roomInfo.current_played_games = 1;
+};
+
+exports.check_ti_valid = () => {
+
 };

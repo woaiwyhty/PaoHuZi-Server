@@ -225,27 +225,32 @@ exports.start = function(conf, mgr){
         socket.on('ifGameReady', (data) => {
             if (gameAlgorithm.check_if_game_can_start(socket.room_id)) {
                 gameAlgorithm.init_game(socket.room_id)
-                console.log(socket.playerInfo);
+                // console.log(socket.playerInfo);
                 socket.emit('game_start', {
                     errcode: 0,
                 });
-                let other_player = roomManager.get_other_players(data.username, socket.room_id);
+                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+                // console.log('ifGameReady  ', other_player);
                 broadcast_information('game_start', {
                     errcode: 0,
                 }, other_player);
             }
         });
 
+        socket.on('ti', (data) => {
+            data = JSON.parse(data);
+
+        });
+
         socket.on('cardsOnHand', (data) => {
             let userId = socket.username;
             if (!userId) {
-                socket.emit('cardsOnHand_result', { errcode: -1 });
+                socket.emit('cardsOnHand_result', {errcode: -1});
                 return;
             }
-
             socket.emit('cardsOnHand_result', {
                 errcode: 0,
-                cardsOnHand: socket.playerInfo.cardsOnHand,
+                cardsOnHand: Array.from(socket.playerInfo.cardsOnHand),
             })
         })
 

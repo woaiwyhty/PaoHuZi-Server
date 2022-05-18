@@ -108,7 +108,7 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
     exports.details.get(room_id).players[i] = {
         username: username,
         nickname: nickname,
-        cardsOnHand: [],
+        cardsOnHand: new Map(),
         cardsDiscarded: [],
         cardsAlreadyUsed: [],
         xi: 0,
