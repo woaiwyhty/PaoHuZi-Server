@@ -48,9 +48,21 @@ exports.create_room = (username, rounds) => {
         created_time: Date.now(),
         current_played_games: 0,
         num_of_players: 0,
+        current_status: {
+            session_key: 0,
+            priority: [2, 2, 2],
+            respondedUser: [null, null, null],
+            respondedNums: 0,
+            numOfRequiredResponse: 0,
+        },
+        next_instruction: {
+            seat_id: 0,
+            type: 0, // 0: shoot card, 1: deal card
+        },
         players: [ null, null, null ],
         current_hole_cards: [],
         total_games: rounds,
+        number_of_wang: 0,
         cancel_room_deadline_if_not_start: 180,
         current_on_turn_player_id: 0,
     });
@@ -61,6 +73,14 @@ exports.create_room = (username, rounds) => {
         msg: "ok",
         room_id: room_id,
     }
+};
+
+exports.init_new_session = (current_status, priority, numOfRequiredResponse) => {
+    current_status.session_key += 1;
+    current_status.priority = priority;
+    current_status.respondedUser = [null, null, null];
+    current_status.respondedNums = 0;
+    current_status.numOfRequiredResponse = numOfRequiredResponse;
 };
 
 exports.check_room_exists = (room_id) => {
@@ -112,6 +132,7 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
         cardsOnHand: new Map(),
         cardsDiscarded: [],
         cardsAlreadyUsed: [],
+        card21st: '',
         xi: 0,
         seat_id: i,
         ip: ip,
@@ -161,6 +182,19 @@ exports.get_other_players = (username, room_id) => {
         }
     }
     return ids;
+};
+
+exports.selectHighestPriorityWithoutGuo = (current_status) => {
+    let highestPriorityPlayerId = null;
+    let highestPriority = 2;
+    for (let i = 0; i < 3; ++i) {
+        if (current_status.respondedUser[i] !== null && current_status.respondedUser[i].type !== 'guo' && current_status.priority[i] < highestPriority) {
+            highestPriority = current_status.priority[i];
+            highestPriorityPlayerId = i;
+        }
+    }
+
+    return highestPriorityPlayerId;
 };
 
 

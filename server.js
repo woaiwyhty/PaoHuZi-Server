@@ -225,26 +225,91 @@ exports.start = function(conf, mgr){
             if (gameAlgorithm.check_if_game_can_start(socket.room_id)) {
                 gameAlgorithm.init_game(socket.room_id)
                 // console.log(socket.playerInfo);
-                socket.emit('game_start', {
-                    errcode: 0,
-                });
-                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+                let roomInfo = roomManager.get_room_info(socket.room_id);
+                let tianhuResult = gameAlgorithm.checkHu([], roomInfo.players[0].cardsOnHand, null);
+                for (let player of roomInfo.players) {
+                    let data_to_sent = {
+                        errcode: 0,
+                        number_of_wang: roomInfo.number_of_wang,
+                        current_played_games: roomInfo.current_played_games,
+                        total_games: roomInfo.total_games,
+                        tianHuResult: tianhuResult,
+                        cardsOnHand: Array.from(player.cardsOnHand),
+                    };
+                    userSocketMap.get(player.username).emit('game_start', data_to_sent);
+                }
                 // console.log('ifGameReady  ', other_player);
-                broadcast_information('game_start', {
+                // broadcast_information('game_start', data_to_sent, other_player);
+                // broadcast_information('need_shoot', {
+                //     errcode: 0,
+                //     op_seat_id: socket.room_info.players[0].seat_id
+                // }, other_player);
+                // socket.emit('need_shoot', {
+                //     errcode: 0,
+                //     op_seat_id: socket.room_info.players[0].seat_id
+                // });
+            }
+        });
+
+        let huCheckout = (huResult, other_player, mysocket) => {
+            const data = {
+                errcode: 0,
+                op_seat_id: mysocket.playerInfo.seat_id,
+                type: 'hu',
+                cardsGroups: huResult.cardsGroups,
+                xi: huResult.xi,
+                fan: huResult.fan,
+                tun: huResult.tun,
+                huInfo: huResult.huInfo,
+            };
+            broadcast_information('other_player_hu', data, other_player);
+            mysocket.emit('self_action_result', data);
+        };
+
+        let process_to_next_instruction = (next_instruction) => {
+
+        };
+
+        let sessionCheckout = (roomManager, roomInfo) => {
+            let highestPriorityPlayerId = roomManager.selectHighestPriorityWithoutGuo(roomInfo.current_status);
+            let other_player = roomManager.get_other_players(roomInfo.players[highestPriorityPlayerId].username, socket.room_id);
+            if (roomInfo.current_status.respondedUser[highestPriorityPlayerId].type === 'hu') {
+                huCheckout(
+                    roomInfo.current_status.respondedUser[highestPriorityPlayerId].data,
+                    other_player,
+                    userSocketMap.get(roomInfo.players[highestPriorityPlayerId].username),
+                );
+            }
+        };
+
+        socket.on('tianhu_result', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId) {
+                return;
+            }
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+
+            if (data.status === true) {
+                // checkout
+                huCheckout(data, other_player, socket);
+            } else {
+                let roomInfo = roomManager.get_room_info(socket.room_id);
+                roomManager.init_new_session(roomInfo.current_status, [2, 0, 1], 2);
+
+                broadcast_information('check_dihu', {
                     errcode: 0,
+                    card21st: roomInfo.players[0].card21st,
+                    sessionKey: roomInfo.current_status.session_key,
                 }, other_player);
-                broadcast_information('need_shoot', {
-                    errcode: 0,
-                    op_seat_id: socket.room_info.players[0].seat_id
-                }, other_player);
-                socket.emit('need_shoot', {
-                    errcode: 0,
-                    op_seat_id: socket.room_info.players[0].seat_id
-                });
             }
         });
 
         socket.on('ti', (data) => {
+            let userId = socket.username;
+            if (!userId || !gameAlgorithm.check_card_valid(data.opCard)) {
+                return;
+            }
             data = JSON.parse(data);
             if (gameAlgorithm.check_ti_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
                 let other_player = roomManager.get_other_players(socket.username, socket.room_id);
@@ -263,16 +328,85 @@ exports.start = function(conf, mgr){
             }
         });
 
+        socket.on('hu', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId) {
+                return;
+            }
+
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+
+            // TODO: validate the hu result on server side
+            if (roomInfo.current_status.numOfRequiredResponse === 0) {
+                huCheckout(data, other_player, socket);
+            } else {
+                roomInfo.current_status.respondedNums += 1;
+                roomInfo.current_status.respondedUser[data.seat_id] = {
+                    type: 'hu',
+                    data: data,
+                };
+                if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
+                    sessionCheckout(roomManager, roomInfo);
+                }
+            }
+        });
+
+        socket.on('guo', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId) {
+                return;
+            }
+
+
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+
+            // TODO: validate the hu result on server side
+            if (roomInfo.current_status.numOfRequiredResponse === 0) {
+                process_to_next_instruction(roomInfo.next_instruction);
+            } else {
+                roomInfo.current_status.respondedNums += 1;
+                roomInfo.current_status.respondedUser[data.seat_id] = {
+                    type: 'guo',
+                    data: data,
+                };
+                if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
+                    sessionCheckout(roomManager, roomInfo);
+                }
+            }
+        });
+
+        socket.on('shootCard', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId || (data.type !== 'onHand' && data.type !== 'onDeal') || !gameAlgorithm.check_card_valid(data.opCard)) {
+                return;
+            }
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+            broadcast_information('other_player_shoot', {
+                errcode: 0,
+                op_seat_id: socket.playerInfo.seat_id,
+                type: data.type,
+                opCard: data.opCard,
+            }, other_player);
+        });
+
         socket.on('cardsOnHand', (data) => {
             let userId = socket.username;
             if (!userId) {
                 socket.emit('cardsOnHand_result', {errcode: -1});
                 return;
             }
+
             socket.emit('cardsOnHand_result', {
                 errcode: 0,
                 cardsOnHand: Array.from(socket.playerInfo.cardsOnHand),
-            })
+                card21st: socket.playerInfo.card21st,
+                sessionKey: roomManager.get_room_info(socket.room_id).current_status.session_key,
+            });
         })
 
         socket.on('exit', function(data) {
