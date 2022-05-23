@@ -9,6 +9,7 @@ const { check, oneOf, query, validationResult } = require('express-validator');
 
 const roomManager = require('./room');
 const gameAlgorithm = require('./gameAlgorithm');
+const {get_room_info} = require("./room");
 
 
 app.all('*', function(req, res, next) {
@@ -238,16 +239,7 @@ exports.start = function(conf, mgr){
                     };
                     userSocketMap.get(player.username).emit('game_start', data_to_sent);
                 }
-                // console.log('ifGameReady  ', other_player);
-                // broadcast_information('game_start', data_to_sent, other_player);
-                // broadcast_information('need_shoot', {
-                //     errcode: 0,
-                //     op_seat_id: socket.room_info.players[0].seat_id
-                // }, other_player);
-                // socket.emit('need_shoot', {
-                //     errcode: 0,
-                //     op_seat_id: socket.room_info.players[0].seat_id
-                // });
+                roomInfo.at_the_beginning = true;
             }
         });
 
@@ -266,12 +258,51 @@ exports.start = function(conf, mgr){
             mysocket.emit('self_action_result', data);
         };
 
-        let process_to_next_instruction = (next_instruction) => {
+        let process_to_next_instruction = (roomInfo, roomManager) => {
+            let next_instruction = roomInfo.next_instruction;
+            let priority = [2, 2, 2];
 
+            if (next_instruction.type === 0) {
+                broadcast_information('need_shoot', {
+                    errcode: 0,
+                    op_seat_id: next_instruction.seat_id
+                }, roomInfo.players);
+            } else if (next_instruction.type === 1) {
+                if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
+                    // wang hu
+                    broadcast_information('wang_hu', {
+                        errcode: 0,
+                    }, roomInfo.players);
+                    roomInfo.number_of_wang += 1;
+                } else {
+                    let dealed_card = roomInfo.current_hole_cards[roomInfo.current_hole_cards_cursor++];
+                    let result = gameAlgorithm.check_ti_wei_pao(next_instruction.seat_id, roomInfo.players, dealed_card);
+
+                    if (result.status === true) {
+                        priority[result.op_seat_id] = 0;
+                        roomManager.init_new_session(roomInfo.current_status, priority, 1);
+                    } else {
+                        priority[next_instruction.seat_id] = 0;
+                        priority[(next_instruction.seat_id + 1) % 3] = 1;
+                        roomManager.init_new_session(roomInfo.current_status, [], 3);
+                    }
+                    broadcast_information('dealed_card', {
+                        errcode: 0,
+                        dealed_card: dealed_card,
+                        op_seat_id: next_instruction.seat_id,
+                        ti_wei_pao_result: result,
+                        session_key: roomInfo.current_status.session_key,
+                    }, roomInfo.players);
+                }
+            }
         };
 
         let sessionCheckout = (roomManager, roomInfo) => {
             let highestPriorityPlayerId = roomManager.selectHighestPriorityWithoutGuo(roomInfo.current_status);
+            if (!highestPriorityPlayerId) {
+                process_to_next_instruction(roomInfo, roomManager);
+                return;
+            }
             let other_player = roomManager.get_other_players(roomInfo.players[highestPriorityPlayerId].username, socket.room_id);
             if (roomInfo.current_status.respondedUser[highestPriorityPlayerId].type === 'hu') {
                 huCheckout(
@@ -306,25 +337,58 @@ exports.start = function(conf, mgr){
         });
 
         socket.on('ti', (data) => {
+            data = JSON.parse(data);
             let userId = socket.username;
             if (!userId || !gameAlgorithm.check_card_valid(data.opCard)) {
                 return;
             }
-            data = JSON.parse(data);
             if (gameAlgorithm.check_ti_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
                 let other_player = roomManager.get_other_players(socket.username, socket.room_id);
                 let cards = ['back', 'back', 'back', 'back'];
                 if (data.needsHide === false) {
                     cards = ['back', 'back', 'back', data.opCard];
                 }
-                socket.playerInfo.xi += gameAlgorithm.calculate_xi('ti', data.opCard);
+                if (data.from_wei_or_peng > 0) {
+                    for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
+                        if (usedCards.type === 'wei') {
+                            usedCards.type = 'ti';
+                            usedCards.xi += 6;
+                            usedCards.cards = cards;
+                            socket.playerInfo.xi += 6;
+                        }
+                    }
+                } else {
+                    let xi = gameAlgorithm.calculate_xi('ti', data.opCard);
+                    socket.playerInfo.cardsAlreadyUsed.push({
+                        type: 'ti',
+                        cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                        xi: xi,
+                    })
+                    socket.playerInfo.xi += xi;
+                }
+                socket.playerInfo.ti_pao_counter++;
                 broadcast_information('other_player_action', {
                     errcode: 0,
                     op_seat_id: socket.playerInfo.seat_id,
                     type: 'ti',
                     cards: cards,
+                    from_wei_or_peng: data.from_wei_or_peng,
                     xi: socket.playerInfo.xi,
                 }, other_player);
+
+                let roomInfo = roomManager.get_room_info(socket.room_id);
+                if (!roomInfo.at_the_beginning) {
+                    setTimeout(() => {
+                        if (socket.playerInfo.ti_pao_counter === 1) {
+                            roomInfo.next_instruction.seat_id = socket.seat_id;
+                            roomInfo.next_instruction.type = 0; // need shoot
+                        } else {
+                            roomInfo.next_instruction.seat_id = (socket.seat_id + 1) % 3;
+                            roomInfo.next_instruction.type = 1; // deal a card
+                        }
+                        process_to_next_instruction(roomInfo, roomManager);
+                    }, 1500);
+                }
             }
         });
 
@@ -360,13 +424,9 @@ exports.start = function(conf, mgr){
                 return;
             }
 
-
             let roomInfo = roomManager.get_room_info(socket.room_id);
-            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
-
-            // TODO: validate the hu result on server side
             if (roomInfo.current_status.numOfRequiredResponse === 0) {
-                process_to_next_instruction(roomInfo.next_instruction);
+                process_to_next_instruction(roomInfo);
             } else {
                 roomInfo.current_status.respondedNums += 1;
                 roomInfo.current_status.respondedUser[data.seat_id] = {
@@ -392,6 +452,7 @@ exports.start = function(conf, mgr){
                 type: data.type,
                 opCard: data.opCard,
             }, other_player);
+            roomManager.get_room_info(socket.room_id).at_the_beginning = false;
         });
 
         socket.on('cardsOnHand', (data) => {

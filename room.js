@@ -59,8 +59,11 @@ exports.create_room = (username, rounds) => {
             seat_id: 0,
             type: 0, // 0: shoot card, 1: deal card
         },
+        waiting_response_from: -1, // -1: no need to wait anyone
         players: [ null, null, null ],
         current_hole_cards: [],
+        current_hole_cards_cursor: 0,
+        at_the_beginning: false,
         total_games: rounds,
         number_of_wang: 0,
         cancel_room_deadline_if_not_start: 180,
@@ -132,6 +135,7 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
         cardsOnHand: new Map(),
         cardsDiscarded: [],
         cardsAlreadyUsed: [],
+        ti_pao_counter: 0,
         card21st: '',
         xi: 0,
         seat_id: i,

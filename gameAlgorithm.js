@@ -58,15 +58,15 @@ let assign_cards_when_game_start = (roomInfo) => {
             );
         }
     }
-    // for (let i = 1; i <= 20; ++i) {
-    //     let key = 'x' + i.toString();
-    //     if (i > 10) {
-    //         key = 'd' + (i - 10).toString();
-    //     }
-    //     roomInfo.players[1].cardsOnHand.set(key, 0);
-    //     roomInfo.players[2].cardsOnHand.set(key, 0);
-    //
-    // }
+    for (let i = 1; i <= 20; ++i) {
+        let key = 'x' + i.toString();
+        if (i > 10) {
+            key = 'd' + (i - 10).toString();
+        }
+        roomInfo.players[1].cardsOnHand.set(key, 0);
+        roomInfo.players[2].cardsOnHand.set(key, 0);
+
+    }
     // roomInfo.players[0].cardsOnHand.set('d5', 4);
     // roomInfo.players[0].cardsOnHand.set('x3', 3);
     // roomInfo.players[0].cardsOnHand.set('d2', 3);
@@ -76,31 +76,32 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[0].cardsOnHand.set('x1', 3);
     // roomInfo.players[0].cardsOnHand.set('x8', 2);
 
-    // roomInfo.players[1].cardsOnHand.set('d5', 4);
-    // roomInfo.players[1].cardsOnHand.set('x3', 3);
-    // roomInfo.players[1].cardsOnHand.set('d2', 3);
-    // roomInfo.players[1].cardsOnHand.set('d7', 3);
-    // roomInfo.players[1].cardsOnHand.set('d10', 3);
-    // roomInfo.players[1].cardsOnHand.set('x10', 3);
-    // roomInfo.players[1].cardsOnHand.set('x1', 3);
-    // roomInfo.players[1].cardsOnHand.set('x8', 2);
-    // roomInfo.players[2].cardsOnHand.set('d5', 4);
-    // roomInfo.players[2].cardsOnHand.set('x3', 3);
-    // roomInfo.players[2].cardsOnHand.set('d2', 3);
-    // roomInfo.players[2].cardsOnHand.set('d7', 3);
-    // roomInfo.players[2].cardsOnHand.set('d10', 3);
-    // roomInfo.players[2].cardsOnHand.set('x10', 3);
-    // roomInfo.players[2].cardsOnHand.set('x1', 3);
-    // roomInfo.players[2].cardsOnHand.set('x8', 2);
-    //
-    // roomInfo.players[0].card21st = 'x8';
-    // roomInfo.players[1].card21st = 'x8';
-    // roomInfo.players[2].card21st = 'x8';
+    roomInfo.players[1].cardsOnHand.set('d5', 4);
+    roomInfo.players[1].cardsOnHand.set('x3', 3);
+    roomInfo.players[1].cardsOnHand.set('d2', 3);
+    roomInfo.players[1].cardsOnHand.set('d7', 3);
+    roomInfo.players[1].cardsOnHand.set('d10', 3);
+    roomInfo.players[1].cardsOnHand.set('x10', 3);
+    roomInfo.players[1].cardsOnHand.set('x1', 3);
+    roomInfo.players[1].cardsOnHand.set('x8', 2);
+    roomInfo.players[2].cardsOnHand.set('d5', 4);
+    roomInfo.players[2].cardsOnHand.set('x3', 3);
+    roomInfo.players[2].cardsOnHand.set('d2', 3);
+    roomInfo.players[2].cardsOnHand.set('d7', 3);
+    roomInfo.players[2].cardsOnHand.set('d10', 3);
+    roomInfo.players[2].cardsOnHand.set('x10', 3);
+    roomInfo.players[2].cardsOnHand.set('x1', 3);
+    roomInfo.players[2].cardsOnHand.set('x8', 2);
+
+    roomInfo.players[0].card21st = 'x8';
+    roomInfo.players[1].card21st = 'x8';
+    roomInfo.players[2].card21st = 'x8';
 
     // roomInfo.players[0].card21st = roomInfo.current_hole_cards[60];
     // roomInfo.players[1].card21st = roomInfo.current_hole_cards[60];
     // roomInfo.players[2].card21st = roomInfo.current_hole_cards[60];
 
+    roomInfo.current_hole_cards_cursor = 61;
     roomInfo.current_hole_cards.splice(0, 61);
 }
 
@@ -319,6 +320,9 @@ let groupCardsBy3Dfs = function(cardsOnHand, numOfCards, finalResult, currentRes
             continue;
         }
 
+        if (!chiMap[card]) {
+            console.log('error   ', card, cardsOnHand);
+        }
         for (let possibility of chiMap[card]) {
             let result = true;
             for (oneCard of possibility) {
@@ -555,3 +559,48 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
     }
     return resultForJiangHu;
 }
+
+exports.check_ti_wei_pao = (op_seat_id, players, dealed_card) => {
+    for (let i = 0; i < 3; ++i) {
+        let res = false, from_wei_or_peng = 0;
+        if (players[i].cardsOnHand.get(dealed_card) === 3) {
+            res = true;
+        }
+        for (let usedCard of players[i].cardsAlreadyUsed) {
+            if (['wei', 'peng'].indexOf(usedCard.type) >= 0 && usedCard.cards[2] === dealed_card) {
+                res = true;
+                from_wei_or_peng = usedCard.type === 'wei' ? 1 : 2;
+                break;
+            }
+        }
+        if (res) {
+            let type = i === op_seat_id ? 'ti' : 'pao';
+            let cards = ['back', 'back', 'back', dealed_card];
+            if (from_wei_or_peng === 2) {
+                cards = [dealed_card, dealed_card, dealed_card, dealed_card];
+            }
+            return {
+                status: true,
+                type: type,
+                from_wei_or_peng: from_wei_or_peng,
+                op_seat_id: i,
+                opCard: dealed_card,
+                cards: cards,
+            }
+        }
+    }
+
+    if (players[op_seat_id].cardsOnHand.get(dealed_card) === 2) {
+        return {
+            status: true,
+            type: 'wei',
+            op_seat_id: op_seat_id,
+            opCard: dealed_card,
+            cards: ['back', 'back', dealed_card],
+        }
+    }
+
+    return {
+        status: false,
+    }
+};
