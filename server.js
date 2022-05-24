@@ -10,7 +10,7 @@ const { check, oneOf, query, validationResult } = require('express-validator');
 const roomManager = require('./room');
 const gameAlgorithm = require('./gameAlgorithm');
 const {get_room_info} = require("./room");
-
+const action_delay = 1500;
 
 app.all('*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -259,42 +259,47 @@ exports.start = function(conf, mgr){
         };
 
         let process_to_next_instruction = (roomInfo, roomManager) => {
-            let next_instruction = roomInfo.next_instruction;
-            let priority = [2, 2, 2];
-
-            if (next_instruction.type === 0) {
-                broadcast_information('need_shoot', {
-                    errcode: 0,
-                    op_seat_id: next_instruction.seat_id
-                }, roomInfo.players);
-            } else if (next_instruction.type === 1) {
-                if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
-                    // wang hu
-                    broadcast_information('wang_hu', {
+            setTimeout(() => {
+                let next_instruction = roomInfo.next_instruction;
+                let priority = [2, 2, 2];
+                console.log("process_to_next_instruction  ", roomInfo.next_instruction, roomInfo.current_status);
+                if (next_instruction.type === 0) {
+                    broadcast_information('need_shoot', {
                         errcode: 0,
+                        op_seat_id: next_instruction.seat_id
                     }, roomInfo.players);
-                    roomInfo.number_of_wang += 1;
-                } else {
-                    let dealed_card = roomInfo.current_hole_cards[roomInfo.current_hole_cards_cursor++];
-                    let result = gameAlgorithm.check_ti_wei_pao(next_instruction.seat_id, roomInfo.players, dealed_card);
-
-                    if (result.status === true) {
-                        priority[result.op_seat_id] = 0;
-                        roomManager.init_new_session(roomInfo.current_status, priority, 1);
+                } else if (next_instruction.type === 1) {
+                    if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
+                        // wang hu
+                        broadcast_information('wang_hu', {
+                            errcode: 0,
+                        }, roomInfo.players);
+                        roomInfo.number_of_wang += 1;
                     } else {
-                        priority[next_instruction.seat_id] = 0;
-                        priority[(next_instruction.seat_id + 1) % 3] = 1;
-                        roomManager.init_new_session(roomInfo.current_status, [], 3);
+                        let dealed_card = roomInfo.current_hole_cards[roomInfo.current_hole_cards_cursor++];
+                        let result = gameAlgorithm.check_ti_wei_pao(next_instruction.seat_id, roomInfo.players, dealed_card);
+
+                        if (result.status === true) {
+                            priority[result.op_seat_id] = 0;
+                            roomManager.init_new_session(roomInfo.current_status, priority, 1);
+                        } else {
+                            priority[next_instruction.seat_id] = 0;
+                            priority[(next_instruction.seat_id + 1) % 3] = 1;
+                            roomManager.init_new_session(roomInfo.current_status, [], 3);
+                        }
+                        broadcast_information('dealed_card', {
+                            errcode: 0,
+                            dealed_card: dealed_card,
+                            op_seat_id: next_instruction.seat_id,
+                            ti_wei_pao_result: result,
+                            session_key: roomInfo.current_status.session_key,
+                        }, roomInfo.players);
                     }
-                    broadcast_information('dealed_card', {
-                        errcode: 0,
-                        dealed_card: dealed_card,
-                        op_seat_id: next_instruction.seat_id,
-                        ti_wei_pao_result: result,
-                        session_key: roomInfo.current_status.session_key,
-                    }, roomInfo.players);
                 }
-            }
+
+                next_instruction.type = 1;
+                next_instruction.seat_id = (next_instruction.seat_id + 1) % 3;
+            }, action_delay);
         };
 
         let sessionCheckout = (roomManager, roomInfo) => {
@@ -429,7 +434,7 @@ exports.start = function(conf, mgr){
                 process_to_next_instruction(roomInfo);
             } else {
                 roomInfo.current_status.respondedNums += 1;
-                roomInfo.current_status.respondedUser[data.seat_id] = {
+                roomInfo.current_status.respondedUser[socket.seat_id] = {
                     type: 'guo',
                     data: data,
                 };
@@ -445,14 +450,19 @@ exports.start = function(conf, mgr){
             if (!userId || (data.type !== 'onHand' && data.type !== 'onDeal') || !gameAlgorithm.check_card_valid(data.opCard)) {
                 return;
             }
+            let roomInfo = roomManager.get_room_info(socket.room_id);
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+            let priority = [0, 0, 0];
+            priority[socket.seat_id] = 2;
+            roomManager.init_new_session(roomInfo.current_status, priority, 2);
             broadcast_information('other_player_shoot', {
                 errcode: 0,
                 op_seat_id: socket.playerInfo.seat_id,
                 type: data.type,
                 opCard: data.opCard,
+                sessionKey: roomInfo.current_status.session_key,
             }, other_player);
-            roomManager.get_room_info(socket.room_id).at_the_beginning = false;
+            roomInfo.at_the_beginning = false;
         });
 
         socket.on('cardsOnHand', (data) => {

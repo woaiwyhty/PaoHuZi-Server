@@ -64,7 +64,7 @@ let assign_cards_when_game_start = (roomInfo) => {
             key = 'd' + (i - 10).toString();
         }
         roomInfo.players[1].cardsOnHand.set(key, 0);
-        roomInfo.players[2].cardsOnHand.set(key, 0);
+        // roomInfo.players[2].cardsOnHand.set(key, 0);
 
     }
     // roomInfo.players[0].cardsOnHand.set('d5', 4);
@@ -78,20 +78,20 @@ let assign_cards_when_game_start = (roomInfo) => {
 
     roomInfo.players[1].cardsOnHand.set('d5', 4);
     roomInfo.players[1].cardsOnHand.set('x3', 3);
-    roomInfo.players[1].cardsOnHand.set('d2', 3);
+    roomInfo.players[1].cardsOnHand.set('d2', 2);
     roomInfo.players[1].cardsOnHand.set('d7', 3);
     roomInfo.players[1].cardsOnHand.set('d10', 3);
     roomInfo.players[1].cardsOnHand.set('x10', 3);
     roomInfo.players[1].cardsOnHand.set('x1', 3);
     roomInfo.players[1].cardsOnHand.set('x8', 2);
-    roomInfo.players[2].cardsOnHand.set('d5', 4);
-    roomInfo.players[2].cardsOnHand.set('x3', 3);
-    roomInfo.players[2].cardsOnHand.set('d2', 3);
-    roomInfo.players[2].cardsOnHand.set('d7', 3);
-    roomInfo.players[2].cardsOnHand.set('d10', 3);
-    roomInfo.players[2].cardsOnHand.set('x10', 3);
-    roomInfo.players[2].cardsOnHand.set('x1', 3);
-    roomInfo.players[2].cardsOnHand.set('x8', 2);
+    // roomInfo.players[2].cardsOnHand.set('d5', 4);
+    // roomInfo.players[2].cardsOnHand.set('x3', 3);
+    // roomInfo.players[2].cardsOnHand.set('d2', 3);
+    // roomInfo.players[2].cardsOnHand.set('d7', 3);
+    // roomInfo.players[2].cardsOnHand.set('d10', 3);
+    // roomInfo.players[2].cardsOnHand.set('x10', 3);
+    // roomInfo.players[2].cardsOnHand.set('x1', 3);
+    // roomInfo.players[2].cardsOnHand.set('x8', 2);
 
     roomInfo.players[0].card21st = 'x8';
     roomInfo.players[1].card21st = 'x8';
@@ -102,7 +102,7 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[2].card21st = roomInfo.current_hole_cards[60];
 
     roomInfo.current_hole_cards_cursor = 61;
-    roomInfo.current_hole_cards.splice(0, 61);
+    // roomInfo.current_hole_cards.splice(0, 61);
 }
 
 exports.init_game = (room_id) => {

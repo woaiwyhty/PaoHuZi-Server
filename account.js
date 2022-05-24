@@ -52,7 +52,6 @@ exports.get_nick_name = (username) => {
 };
 
 exports.validate_online = (username, token) => {
-    console.log("validate online   ", exports.online_users_info.get(username), username, token, typeof username);
     if (exports.online_users_info.has(username) && exports.online_users_info.get(username).token === token) {
         exports.online_users_info.get(username).lastActiveTime = Date.now();
         return true;

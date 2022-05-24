@@ -188,13 +188,25 @@ exports.get_other_players = (username, room_id) => {
     return ids;
 };
 
+const typePriority = {
+    'ti': 0,
+    'wei': 0,
+    'pao': 1,
+    'peng': 2,
+    'chi': 3,
+};
 exports.selectHighestPriorityWithoutGuo = (current_status) => {
     let highestPriorityPlayerId = null;
     let highestPriority = 2;
     for (let i = 0; i < 3; ++i) {
-        if (current_status.respondedUser[i] !== null && current_status.respondedUser[i].type !== 'guo' && current_status.priority[i] < highestPriority) {
-            highestPriority = current_status.priority[i];
-            highestPriorityPlayerId = i;
+        let info = current_status.respondedUser[i];
+        if (info !== null && info.type !== 'guo') {
+            if (highestPriorityPlayerId === null
+                || current_status.priority[i] < highestPriority
+                || typePriority[info.type] < typePriority[current_status.respondedUser[highestPriorityPlayerId].type]) {
+                highestPriority = current_status.priority[i];
+                highestPriorityPlayerId = i;
+            }
         }
     }
 
