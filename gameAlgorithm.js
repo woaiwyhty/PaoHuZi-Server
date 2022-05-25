@@ -20,7 +20,7 @@ exports.check_if_game_can_start = (room_id) => {
 
 let generateAllCardSet = () => {
     let cards = [];
-    for (let i = 0; i <= 20; ++i) {
+    for (let i = 1; i <= 20; ++i) {
         let key = 'x' + i.toString();
         if (i > 10) {
             key = 'd' + (i - 10).toString();
@@ -58,15 +58,15 @@ let assign_cards_when_game_start = (roomInfo) => {
             );
         }
     }
-    for (let i = 1; i <= 20; ++i) {
-        let key = 'x' + i.toString();
-        if (i > 10) {
-            key = 'd' + (i - 10).toString();
-        }
-        roomInfo.players[1].cardsOnHand.set(key, 0);
-        // roomInfo.players[2].cardsOnHand.set(key, 0);
-
-    }
+    // for (let i = 1; i <= 20; ++i) {
+    //     let key = 'x' + i.toString();
+    //     if (i > 10) {
+    //         key = 'd' + (i - 10).toString();
+    //     }
+    //     roomInfo.players[1].cardsOnHand.set(key, 0);
+    //     // roomInfo.players[2].cardsOnHand.set(key, 0);
+    //
+    // }
     // roomInfo.players[0].cardsOnHand.set('d5', 4);
     // roomInfo.players[0].cardsOnHand.set('x3', 3);
     // roomInfo.players[0].cardsOnHand.set('d2', 3);
@@ -76,14 +76,14 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[0].cardsOnHand.set('x1', 3);
     // roomInfo.players[0].cardsOnHand.set('x8', 2);
 
-    roomInfo.players[1].cardsOnHand.set('d5', 4);
-    roomInfo.players[1].cardsOnHand.set('x3', 3);
-    roomInfo.players[1].cardsOnHand.set('d2', 2);
-    roomInfo.players[1].cardsOnHand.set('d7', 3);
-    roomInfo.players[1].cardsOnHand.set('d10', 3);
-    roomInfo.players[1].cardsOnHand.set('x10', 3);
-    roomInfo.players[1].cardsOnHand.set('x1', 3);
-    roomInfo.players[1].cardsOnHand.set('x8', 2);
+    // roomInfo.players[1].cardsOnHand.set('d5', 4);
+    // roomInfo.players[1].cardsOnHand.set('x3', 3);
+    // roomInfo.players[1].cardsOnHand.set('d2', 2);
+    // roomInfo.players[1].cardsOnHand.set('d7', 3);
+    // roomInfo.players[1].cardsOnHand.set('d10', 3);
+    // roomInfo.players[1].cardsOnHand.set('x10', 3);
+    // roomInfo.players[1].cardsOnHand.set('x1', 3);
+    // roomInfo.players[1].cardsOnHand.set('x8', 2);
     // roomInfo.players[2].cardsOnHand.set('d5', 4);
     // roomInfo.players[2].cardsOnHand.set('x3', 3);
     // roomInfo.players[2].cardsOnHand.set('d2', 3);
@@ -93,9 +93,9 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[2].cardsOnHand.set('x1', 3);
     // roomInfo.players[2].cardsOnHand.set('x8', 2);
 
-    roomInfo.players[0].card21st = 'x8';
-    roomInfo.players[1].card21st = 'x8';
-    roomInfo.players[2].card21st = 'x8';
+    // roomInfo.players[0].card21st = 'x8';
+    // roomInfo.players[1].card21st = 'x8';
+    // roomInfo.players[2].card21st = 'x8';
 
     // roomInfo.players[0].card21st = roomInfo.current_hole_cards[60];
     // roomInfo.players[1].card21st = roomInfo.current_hole_cards[60];
@@ -262,7 +262,7 @@ let checkChiOnlyOnHandDfs = function(card, cardsOnHand, finalResult, currentResu
     }
     for (possibility of chiMap[card]) {
         let result = true;
-        for (oneCard of possibility) {
+        for (let oneCard of possibility) {
             if (!(cardsOnHand.get(oneCard) === 1 || cardsOnHand.get(oneCard) === 2)) {
                 result = false;
                 break;
@@ -325,9 +325,15 @@ let groupCardsBy3Dfs = function(cardsOnHand, numOfCards, finalResult, currentRes
         }
         for (let possibility of chiMap[card]) {
             let result = true;
-            for (oneCard of possibility) {
-                if (!(cardsOnHand.get(oneCard) === 1 || cardsOnHand.get(oneCard) === 2)) {
+            for (let oneCard of possibility) {
+                cardsOnHand.set(oneCard, cardsOnHand.get(oneCard) - 1);
+            }
+            for (let oneCard of possibility) {
+                if (cardsOnHand.get(oneCard) < 0) {
                     result = false;
+                    for (let oneCard1 of possibility) {
+                        cardsOnHand.set(oneCard1, cardsOnHand.get(oneCard1) - 1);
+                    }
                     break;
                 }
             }
@@ -530,10 +536,16 @@ let checkHuHelper = function(cardsOnHand, alreadyNeedJiang, currentXi, cardsAlre
             }
         }
     }
+    if (maxHu === null) {
+        return {
+            status: false,
+        };
+    }
     return maxHu;
 }
 
 exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
+    console.log('check hu start   ', cardsAlreadyUsed, cardsOnHand, currentCard);
     // tian, di, wang should be added later.
     let tempCardSet = new Map(JSON.parse(
         JSON.stringify(Array.from(cardsOnHand))
@@ -553,10 +565,11 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
         }
     }
     let resultForJiangHu = checkHuHelper(cardsOnHand, needJiang, currentXi, cardsAlreadyUsed);
-    if (resultForJiangHu) {
+    if (resultForJiangHu && sumOfCardOnHand === 1) {
         resultForJiangHu.huInfo.push("耍猴");
         resultForJiangHu.fan += 8;
     }
+    console.log('check hu end   ', resultForJiangHu);
     return resultForJiangHu;
 }
 
@@ -595,6 +608,7 @@ exports.check_ti_wei_pao = (op_seat_id, players, dealed_card) => {
             status: true,
             type: 'wei',
             op_seat_id: op_seat_id,
+            from_wei_or_peng: 0,
             opCard: dealed_card,
             cards: ['back', 'back', dealed_card],
         }
