@@ -10,7 +10,7 @@ const { check, oneOf, query, validationResult } = require('express-validator');
 const roomManager = require('./room');
 const gameAlgorithm = require('./gameAlgorithm');
 const {get_room_info} = require("./room");
-const action_delay = 1500;
+const action_delay = 2500;
 
 app.all('*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -356,7 +356,7 @@ exports.start = function(conf, mgr){
                 }
                 if (data.from_wei_or_peng > 0) {
                     for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
-                        if (usedCards.type === 'wei') {
+                        if (usedCards.type === 'wei' && usedCards.cards[2] === data.opCard) {
                             usedCards.type = 'ti';
                             usedCards.xi += 6;
                             usedCards.cards = cards;
@@ -393,7 +393,7 @@ exports.start = function(conf, mgr){
                             roomInfo.next_instruction.type = 1; // deal a card
                         }
                         process_to_next_instruction(roomInfo, roomManager);
-                    }, 1500);
+                    }, action_delay);
                 }
             }
         });
@@ -420,6 +420,94 @@ exports.start = function(conf, mgr){
                 if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
                     sessionCheckout(roomManager, roomInfo);
                 }
+            }
+        });
+
+        socket.on('pao', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId || !gameAlgorithm.check_card_valid(data.opCard)) {
+                return;
+            }
+
+            if (gameAlgorithm.check_pao_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
+                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+                let newXi = gameAlgorithm.calculate_xi('pao', data.opCard);
+                if (data.from_wei_or_peng > 0) {
+                    for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
+                        if (['wei', 'peng'].indexOf(usedCards.type)
+                            && usedCards.cards[2] === data.opCard) {
+                            usedCards.type = 'pao';
+                            usedCards.cards = data.cards;
+                            socket.playerInfo.xi += (newXi - usedCards.xi);
+                            usedCards.xi = newXi;
+                        }
+                    }
+                } else {
+                    socket.playerInfo.cardsAlreadyUsed.push({
+                        type: 'pao',
+                        cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                        xi: newXi,
+                    })
+                    socket.playerInfo.xi += newXi;
+                }
+
+                socket.playerInfo.ti_pao_counter++;
+                broadcast_information('other_player_action', {
+                    errcode: 0,
+                    op_seat_id: socket.playerInfo.seat_id,
+                    type: 'pao',
+                    cards: data.cards,
+                    from_wei_or_peng: data.from_wei_or_peng,
+                    xi: socket.playerInfo.xi,
+                }, other_player);
+
+                let roomInfo = roomManager.get_room_info(socket.room_id);
+                setTimeout(() => {
+                    if (socket.playerInfo.ti_pao_counter === 1) {
+                        roomInfo.next_instruction.seat_id = socket.seat_id;
+                        roomInfo.next_instruction.type = 0; // need shoot
+                    } else {
+                        roomInfo.next_instruction.seat_id = (socket.seat_id + 1) % 3;
+                        roomInfo.next_instruction.type = 1; // deal a card
+                    }
+                    process_to_next_instruction(roomInfo, roomManager);
+                }, action_delay);
+            }
+        });
+
+        socket.on('wei', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId || !gameAlgorithm.check_card_valid(data.opCard)) {
+                return;
+            }
+
+            if (gameAlgorithm.check_wei_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
+                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+                let newXi = gameAlgorithm.calculate_xi('wei', data.opCard);
+                socket.playerInfo.cardsAlreadyUsed.push({
+                    type: 'wei',
+                    cards: [data.opCard, data.opCard, data.opCard],
+                    xi: newXi,
+                })
+                socket.playerInfo.xi += newXi;
+
+                broadcast_information('other_player_action', {
+                    errcode: 0,
+                    op_seat_id: socket.playerInfo.seat_id,
+                    type: 'wei',
+                    cards: data.cards,
+                    from_wei_or_peng: 0,
+                    xi: socket.playerInfo.xi,
+                }, other_player);
+
+                let roomInfo = roomManager.get_room_info(socket.room_id);
+                setTimeout(() => {
+                    roomInfo.next_instruction.seat_id = socket.seat_id;
+                    roomInfo.next_instruction.type = 0; // need shoot
+                    process_to_next_instruction(roomInfo, roomManager);
+                }, action_delay);
             }
         });
 

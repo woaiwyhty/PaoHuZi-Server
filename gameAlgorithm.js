@@ -120,6 +120,14 @@ exports.check_ti_valid = (cardsOnHand, card) => {
     return cardsOnHand.has(card) && cardsOnHand.get(card) === 4;
 };
 
+exports.check_pao_valid = (cardsOnHand, card) => {
+    return cardsOnHand.has(card) && cardsOnHand.get(card) === 3;
+};
+
+exports.check_wei_valid = (cardsOnHand, card) => {
+    return cardsOnHand.has(card) && cardsOnHand.get(card) === 2;
+};
+
 const xiArray = {
     'da_peng': 3,
     'da_wei': 6,
@@ -134,25 +142,25 @@ const xiArray = {
 };
 const chiMap = {
     'x1':  [['x1', 'x2', 'x3'], ['x1', 'x1', 'd1'], ['x1', 'd1', 'd1']] ,
-    'x2':  [['x1', 'x2', 'x3'], ['x2', 'x2', 'd2'], ['x2', 'd2', 'd2'], ['x2', 'x7', 'd10']] ,
+    'x2':  [['x1', 'x2', 'x3'], ['x2', 'x2', 'd2'], ['x2', 'd2', 'd2'], ['x2', 'x7', 'x10']] ,
     'x3':  [['x1', 'x2', 'x3'], ['x3', 'x3', 'd3'], ['x3', 'd3', 'd3']] ,
     'x4':  [['x4', 'x4', 'd4'], ['x4', 'd4', 'd4']] ,
     'x5':  [['x5', 'x5', 'd5'], ['x5', 'd5', 'd5']] ,
     'x6':  [['x6', 'x6', 'd6'], ['x6', 'd6', 'd6']] ,
-    'x7':  [['x7', 'x7', 'd7'], ['x7', 'd7', 'd7'], ['x2', 'x7', 'd10']] ,
+    'x7':  [['x7', 'x7', 'd7'], ['x7', 'd7', 'd7'], ['x2', 'x7', 'x10']] ,
     'x8':  [['x8', 'x8', 'd8'], ['x8', 'd8', 'd8']] ,
     'x9':  [['x9', 'x9', 'd9'], ['x9', 'd9', 'd9']] ,
-    'x10':  [['x10', 'x10', 'd10'], ['x10', 'd10', 'd10'], ['x2', 'x7', 'd10']] ,
+    'x10':  [['x10', 'x10', 'd10'], ['x10', 'd10', 'd10'], ['x2', 'x7', 'x10']] ,
     'd1':  [['d1', 'd2', 'd3'], ['d1', 'd1', 'x1'], ['d1', 'x1', 'x1']] ,
-    'd2':  [['d1', 'd2', 'd3'], ['d2', 'd2', 'x2'], ['d2', 'x2', 'x2'], ['d2', 'd7', 'x10']] ,
+    'd2':  [['d1', 'd2', 'd3'], ['d2', 'd2', 'x2'], ['d2', 'x2', 'x2'], ['d2', 'd7', 'd10']] ,
     'd3':  [['d1', 'd2', 'd3'], ['d3', 'd3', 'x3'], ['d3', 'x3', 'x3']] ,
     'd4':  [['d4', 'd4', 'x4'], ['d4', 'x4', 'x4']] ,
     'd5':  [['d5', 'd5', 'x5'], ['d5', 'x5', 'x5']] ,
     'd6':  [['d6', 'd6', 'x6'], ['d6', 'x6', 'x6']] ,
-    'd7':  [['d7', 'd7', 'x7'], ['d7', 'x7', 'x7'], ['d2', 'd7', 'x10']] ,
+    'd7':  [['d7', 'd7', 'x7'], ['d7', 'x7', 'x7'], ['d2', 'd7', 'd10']] ,
     'd8':  [['d8', 'd8', 'x8'], ['d8', 'x8', 'x8']] ,
     'd9':  [['d9', 'd9', 'x9'], ['d9', 'x9', 'x9']] ,
-    'd10':  [['d10', 'd10', 'x10'], ['d10', 'x10', 'x10'], ['d2', 'd7', 'x10']] ,
+    'd10':  [['d10', 'd10', 'x10'], ['d10', 'x10', 'x10'], ['d2', 'd7', 'd10']] ,
 }
 
 const cardRed = ['x2', 'x7', 'x10', 'd2', 'd7', 'd10'];
@@ -297,6 +305,14 @@ exports.checkChi = function(card, cardsOnHand) {
     // we may chi multiple times to make sure we don't have the same dealed card on hand.
     // it is necessary to use dfs to find all possibilities.
     checkChiOnlyOnHandDfs(card, tempCardSet, finalResult, currentResult);
+    if (finalResult.length > 0) {
+        for (let item of finalResult) {
+            item.sort();
+        }
+        finalResult = finalResult.sort().filter((item, pos, array) => {
+            return !pos || item.toString() !== array[pos - 1].toString();
+        });
+    }
     return {
         status: finalResult.length > 0,
         chiWays: finalResult,
@@ -332,7 +348,7 @@ let groupCardsBy3Dfs = function(cardsOnHand, numOfCards, finalResult, currentRes
                 if (cardsOnHand.get(oneCard) < 0) {
                     result = false;
                     for (let oneCard1 of possibility) {
-                        cardsOnHand.set(oneCard1, cardsOnHand.get(oneCard1) - 1);
+                        cardsOnHand.set(oneCard1, cardsOnHand.get(oneCard1) + 1);
                     }
                     break;
                 }
@@ -344,9 +360,6 @@ let groupCardsBy3Dfs = function(cardsOnHand, numOfCards, finalResult, currentRes
                     cards: possibility,
                     xi: 0, // calculate later to save time
                 });
-                for (oneCard of possibility) {
-                    cardsOnHand.set(oneCard, cardsOnHand.get(oneCard) - 1);
-                }
                 // console.log("before group   ", possibility);
                 groupCardsBy3Dfs(cardsOnHand, numOfCards - 3, finalResult, newResult);
                 // console.log("after group   ", possibility);
