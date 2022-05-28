@@ -113,7 +113,7 @@ exports.init_game = (room_id) => {
 
     roomInfo.current_hole_cards = shuffle(generateAllCardSet());
     assign_cards_when_game_start(roomInfo);
-    roomInfo.current_played_games = 1;
+    roomInfo.current_played_games += 1;
 };
 
 exports.check_ti_valid = (cardsOnHand, card) => {

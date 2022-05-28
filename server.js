@@ -244,7 +244,8 @@ exports.start = function(conf, mgr){
             }
         });
 
-        let huCheckout = (huResult, other_player, mysocket) => {
+        let huCheckout = (huResult, other_player, mysocket, roomInfo) => {
+            const holeCards = roomInfo.current_hole_cards.slice(roomInfo.current_hole_cards_cursor)
             const data = {
                 errcode: 0,
                 op_seat_id: mysocket.playerInfo.seat_id,
@@ -254,8 +255,23 @@ exports.start = function(conf, mgr){
                 fan: huResult.fan,
                 tun: huResult.tun,
                 huInfo: huResult.huInfo,
+                holeCards: holeCards,
             };
             broadcast_information('other_player_hu', data, other_player);
+            mysocket.emit('self_action_result', data);
+        };
+
+        let pengCheckout = (pengResult, other_player, mysocket) => {
+            mysocket.playerInfo.xi += gameAlgorithm.calculate_xi('peng', pengResult.opCard);
+            const data = {
+                errcode: 0,
+                op_seat_id: socket.playerInfo.seat_id,
+                type: 'peng',
+                cards: [pengResult.opCard, pengResult.opCard, pengResult.opCard],
+                from_wei_or_peng: 0,
+                xi: mysocket.playerInfo.xi,
+            };
+            broadcast_information('other_player_action', data, other_player);
             mysocket.emit('self_action_result', data);
         };
 
@@ -315,6 +331,7 @@ exports.start = function(conf, mgr){
                     roomInfo.current_status.respondedUser[highestPriorityPlayerId].data,
                     other_player,
                     userSocketMap.get(roomInfo.players[highestPriorityPlayerId].username),
+                    roomInfo,
                 );
             }
         };
@@ -326,14 +343,13 @@ exports.start = function(conf, mgr){
                 return;
             }
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+            let roomInfo = roomManager.get_room_info(socket.room_id);
 
             if (data.status === true) {
                 // checkout
-                huCheckout(data, other_player, socket);
+                huCheckout(data, other_player, socket, roomInfo);
             } else {
-                let roomInfo = roomManager.get_room_info(socket.room_id);
                 roomManager.init_new_session(roomInfo.current_status, [2, 0, 1], 2);
-
                 broadcast_information('check_dihu', {
                     errcode: 0,
                     card21st: roomInfo.players[0].card21st,
@@ -371,6 +387,7 @@ exports.start = function(conf, mgr){
                         xi: xi,
                     })
                     socket.playerInfo.xi += xi;
+                    socket.playerInfo.cardsOnHand.set(data.opCard, 0);
                 }
                 socket.playerInfo.ti_pao_counter++;
                 broadcast_information('other_player_action', {
@@ -450,6 +467,7 @@ exports.start = function(conf, mgr){
                         xi: newXi,
                     })
                     socket.playerInfo.xi += newXi;
+                    socket.playerInfo.cardsOnHand.set(data.opCard, 0);
                 }
 
                 socket.playerInfo.ti_pao_counter++;
@@ -492,6 +510,7 @@ exports.start = function(conf, mgr){
                     xi: newXi,
                 })
                 socket.playerInfo.xi += newXi;
+                socket.playerInfo.cardsOnHand.set(data.opCard, 0);
 
                 broadcast_information('other_player_action', {
                     errcode: 0,
@@ -508,6 +527,30 @@ exports.start = function(conf, mgr){
                     roomInfo.next_instruction.type = 0; // need shoot
                     process_to_next_instruction(roomInfo, roomManager);
                 }, action_delay);
+            }
+        });
+
+        socket.on('peng', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId || !gameAlgorithm.check_card_valid(data.opCard)) {
+                return;
+            }
+            if (gameAlgorithm.checkPeng(data.opCard, socket.playerInfo.cardsOnHand)) {
+                let roomInfo = roomManager.get_room_info(socket.room_id);
+                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+                if (roomInfo.current_status.numOfRequiredResponse === 0) {
+                    pengCheckout(data, other_player, socket);
+                } else {
+                    roomInfo.current_status.respondedNums += 1;
+                    roomInfo.current_status.respondedUser[data.seat_id] = {
+                        type: 'peng',
+                        data: data,
+                    };
+                    if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
+                        sessionCheckout(roomManager, roomInfo);
+                    }
+                }
             }
         });
 
