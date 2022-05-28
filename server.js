@@ -333,6 +333,12 @@ exports.start = function(conf, mgr){
                     userSocketMap.get(roomInfo.players[highestPriorityPlayerId].username),
                     roomInfo,
                 );
+            } else if (roomInfo.current_status.respondedUser[highestPriorityPlayerId].type === 'peng') {
+                pengCheckout(
+                    roomInfo.current_status.respondedUser[highestPriorityPlayerId].data,
+                    other_player,
+                    userSocketMap.get(roomInfo.players[highestPriorityPlayerId].username),
+                )
             }
         };
 
