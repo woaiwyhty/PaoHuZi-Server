@@ -192,8 +192,9 @@ const typePriority = {
     'ti': 0,
     'wei': 0,
     'pao': 1,
-    'peng': 2,
-    'chi': 3,
+    'hu': 2,
+    'peng': 3,
+    'chi': 4,
 };
 exports.selectHighestPriorityWithoutGuo = (current_status) => {
     let highestPriorityPlayerId = null;

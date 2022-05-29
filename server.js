@@ -275,6 +275,23 @@ exports.start = function(conf, mgr){
             mysocket.emit('self_action_result', data);
         };
 
+        let chiCheckout = (chiResult, other_player, mysocket) => {
+            for (let cards of chiResult.manyCards) {
+                mysocket.playerInfo.xi += gameAlgorithm.calculate_xi('chi', cards);
+            }
+
+            const data = {
+                errcode: 0,
+                op_seat_id: socket.playerInfo.seat_id,
+                type: 'chi',
+                manyCards: chiResult.manyCards,
+                xi: mysocket.playerInfo.xi,
+            };
+
+            broadcast_information('other_player_action', data, other_player);
+            mysocket.emit('self_action_result', data);
+        };
+
         let process_to_next_instruction = (roomInfo, roomManager) => {
             setTimeout(() => {
                 let next_instruction = roomInfo.next_instruction;
@@ -339,6 +356,18 @@ exports.start = function(conf, mgr){
                     other_player,
                     userSocketMap.get(roomInfo.players[highestPriorityPlayerId].username),
                 )
+                roomInfo.next_instruction.seat_id = roomInfo.players[highestPriorityPlayerId].seat_id;
+                roomInfo.next_instruction.type = 0; // need shoot
+                process_to_next_instruction(roomInfo, roomManager);
+            } else if (roomInfo.current_status.respondedUser[highestPriorityPlayerId].type === 'chi') {
+                chiCheckout(
+                    roomInfo.current_status.respondedUser[highestPriorityPlayerId].data,
+                    other_player,
+                    userSocketMap.get(roomInfo.players[highestPriorityPlayerId].username),
+                )
+                roomInfo.next_instruction.seat_id = roomInfo.players[highestPriorityPlayerId].seat_id;
+                roomInfo.next_instruction.type = 0; // need shoot
+                process_to_next_instruction(roomInfo, roomManager);
             }
         };
 
@@ -556,6 +585,30 @@ exports.start = function(conf, mgr){
                     if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
                         sessionCheckout(roomManager, roomInfo);
                     }
+                }
+            }
+        });
+
+        socket.on('chi', (data) => {
+            data = JSON.parse(data);
+            let userId = socket.username;
+            if (!userId) {
+                return;
+            }
+
+            // TODO: check chi valid
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+            if (roomInfo.current_status.numOfRequiredResponse === 0) {
+                chiCheckout(data, other_player, socket);
+            } else {
+                roomInfo.current_status.respondedNums += 1;
+                roomInfo.current_status.respondedUser[data.seat_id] = {
+                    type: 'chi',
+                    data: data,
+                };
+                if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
+                    sessionCheckout(roomManager, roomInfo);
                 }
             }
         });
