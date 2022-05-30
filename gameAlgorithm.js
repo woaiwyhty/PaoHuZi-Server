@@ -58,15 +58,15 @@ let assign_cards_when_game_start = (roomInfo) => {
             );
         }
     }
-    // for (let i = 1; i <= 20; ++i) {
-    //     let key = 'x' + i.toString();
-    //     if (i > 10) {
-    //         key = 'd' + (i - 10).toString();
-    //     }
-    //     roomInfo.players[1].cardsOnHand.set(key, 0);
-    //     // roomInfo.players[2].cardsOnHand.set(key, 0);
-    //
-    // }
+    for (let i = 1; i <= 20; ++i) {
+        let key = 'x' + i.toString();
+        if (i > 10) {
+            key = 'd' + (i - 10).toString();
+        }
+        roomInfo.players[1].cardsOnHand.set(key, 0);
+        // roomInfo.players[2].cardsOnHand.set(key, 0);
+
+    }
     // roomInfo.players[0].cardsOnHand.set('d5', 4);
     // roomInfo.players[0].cardsOnHand.set('x3', 3);
     // roomInfo.players[0].cardsOnHand.set('d2', 3);
@@ -76,14 +76,14 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[0].cardsOnHand.set('x1', 3);
     // roomInfo.players[0].cardsOnHand.set('x8', 2);
 
-    // roomInfo.players[1].cardsOnHand.set('d5', 4);
-    // roomInfo.players[1].cardsOnHand.set('x3', 3);
-    // roomInfo.players[1].cardsOnHand.set('d2', 2);
-    // roomInfo.players[1].cardsOnHand.set('d7', 3);
-    // roomInfo.players[1].cardsOnHand.set('d10', 3);
-    // roomInfo.players[1].cardsOnHand.set('x10', 3);
-    // roomInfo.players[1].cardsOnHand.set('x1', 3);
-    // roomInfo.players[1].cardsOnHand.set('x8', 2);
+    roomInfo.players[1].cardsOnHand.set('d5', 4);
+    roomInfo.players[1].cardsOnHand.set('x3', 3);
+    roomInfo.players[1].cardsOnHand.set('d2', 2);
+    roomInfo.players[1].cardsOnHand.set('d7', 3);
+    roomInfo.players[1].cardsOnHand.set('d10', 3);
+    roomInfo.players[1].cardsOnHand.set('x10', 3);
+    roomInfo.players[1].cardsOnHand.set('x1', 3);
+    roomInfo.players[1].cardsOnHand.set('x8', 2);
     // roomInfo.players[2].cardsOnHand.set('d5', 4);
     // roomInfo.players[2].cardsOnHand.set('x3', 3);
     // roomInfo.players[2].cardsOnHand.set('d2', 3);

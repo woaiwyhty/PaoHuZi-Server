@@ -401,10 +401,7 @@ exports.start = function(conf, mgr){
             }
             if (gameAlgorithm.check_ti_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
                 let other_player = roomManager.get_other_players(socket.username, socket.room_id);
-                let cards = ['back', 'back', 'back', 'back'];
-                if (data.needsHide === false) {
-                    cards = ['back', 'back', 'back', data.opCard];
-                }
+                let cards = ['back', 'back', 'back', data.opCard];
                 if (data.from_wei_or_peng > 0) {
                     for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
                         if (usedCards.type === 'wei' && usedCards.cards[2] === data.opCard) {
@@ -429,6 +426,7 @@ exports.start = function(conf, mgr){
                     errcode: 0,
                     op_seat_id: socket.playerInfo.seat_id,
                     type: 'ti',
+                    needsHide: data.needsHide,
                     cards: cards,
                     from_wei_or_peng: data.from_wei_or_peng,
                     xi: socket.playerInfo.xi,
