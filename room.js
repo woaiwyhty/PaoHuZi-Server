@@ -54,6 +54,8 @@ exports.create_room = (username, rounds) => {
             respondedUser: [null, null, null],
             respondedNums: 0,
             numOfRequiredResponse: 0,
+            op_card: '',
+            dealed_seat_id: -1,
         },
         next_instruction: {
             seat_id: 0,
@@ -78,12 +80,14 @@ exports.create_room = (username, rounds) => {
     }
 };
 
-exports.init_new_session = (current_status, priority, numOfRequiredResponse) => {
+exports.init_new_session = (current_status, priority, numOfRequiredResponse, op_card = '', dealed_seat_id = -1) => {
     current_status.session_key += 1;
     current_status.priority = priority;
     current_status.respondedUser = [null, null, null];
     current_status.respondedNums = 0;
     current_status.numOfRequiredResponse = numOfRequiredResponse;
+    current_status.op_card = op_card; // will be set when the card is dealed.
+    current_status.dealed_seat_id = dealed_seat_id; // will be set when the card is dealed.
 };
 
 exports.check_room_exists = (room_id) => {
@@ -135,6 +139,7 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
         cardsOnHand: new Map(),
         cardsDiscarded: [],
         cardsAlreadyUsed: [],
+        cardsChooseToNotUsed: [],
         ti_pao_counter: 0,
         card21st: '',
         xi: 0,

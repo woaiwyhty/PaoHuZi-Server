@@ -315,18 +315,18 @@ exports.start = function(conf, mgr){
 
                         if (result.status === true) {
                             priority[result.op_seat_id] = 0;
-                            roomManager.init_new_session(roomInfo.current_status, priority, 1);
+                            roomManager.init_new_session(roomInfo.current_status, priority, 1, dealed_card, next_instruction.seat_id);
                         } else {
                             priority[next_instruction.seat_id] = 0;
                             priority[(next_instruction.seat_id + 1) % 3] = 1;
-                            roomManager.init_new_session(roomInfo.current_status, [], 3);
+                            roomManager.init_new_session(roomInfo.current_status, [], 3, dealed_card, next_instruction.seat_id);
                         }
                         broadcast_information('dealed_card', {
                             errcode: 0,
                             dealed_card: dealed_card,
                             op_seat_id: next_instruction.seat_id,
                             ti_wei_pao_result: result,
-                            session_key: roomInfo.current_status.session_key,
+                            sessionKey: roomInfo.current_status.session_key,
                         }, roomInfo.players);
                     }
                 }
@@ -338,7 +338,19 @@ exports.start = function(conf, mgr){
 
         let sessionCheckout = (roomManager, roomInfo) => {
             let highestPriorityPlayerId = roomManager.selectHighestPriorityWithoutGuo(roomInfo.current_status);
-            if (!highestPriorityPlayerId) {
+            console.log('sessionCheckout  ', roomInfo.current_status, highestPriorityPlayerId)
+            if (highestPriorityPlayerId === null) {
+                if (roomInfo.current_status.op_card !== '') {
+                    // send discarded dealed card
+                    let players = roomInfo.players;
+                    broadcast_information('discarded_dealed_card', {
+                        errcode: 0,
+                        opCard: roomInfo.current_status.op_card,
+                        op_seat_id: roomInfo.current_status.dealed_seat_id,
+                    }, players);
+                    players[roomInfo.current_status.dealed_seat_id].cardsDiscarded.push(roomInfo.current_status.op_card);
+
+                }
                 process_to_next_instruction(roomInfo, roomManager);
                 return;
             }
@@ -399,6 +411,7 @@ exports.start = function(conf, mgr){
             if (!userId || !gameAlgorithm.check_card_valid(data.opCard)) {
                 return;
             }
+            console.log('ti received  ', data);
             if (gameAlgorithm.check_ti_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
                 let other_player = roomManager.get_other_players(socket.username, socket.room_id);
                 let cards = ['back', 'back', 'back', data.opCard];
@@ -601,7 +614,7 @@ exports.start = function(conf, mgr){
                 chiCheckout(data, other_player, socket);
             } else {
                 roomInfo.current_status.respondedNums += 1;
-                roomInfo.current_status.respondedUser[data.seat_id] = {
+                roomInfo.current_status.respondedUser[socket.seat_id] = {
                     type: 'chi',
                     data: data,
                 };
@@ -619,6 +632,9 @@ exports.start = function(conf, mgr){
             }
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
+            if (roomInfo.current_status.dealed_seat_id !== -1) {
+                socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.cardsChooseToNotUsed);
+            }
             if (roomInfo.current_status.numOfRequiredResponse === 0) {
                 process_to_next_instruction(roomInfo);
             } else {

@@ -58,15 +58,15 @@ let assign_cards_when_game_start = (roomInfo) => {
             );
         }
     }
-    for (let i = 1; i <= 20; ++i) {
-        let key = 'x' + i.toString();
-        if (i > 10) {
-            key = 'd' + (i - 10).toString();
-        }
-        roomInfo.players[1].cardsOnHand.set(key, 0);
-        // roomInfo.players[2].cardsOnHand.set(key, 0);
-
-    }
+    // for (let i = 1; i <= 20; ++i) {
+    //     let key = 'x' + i.toString();
+    //     if (i > 10) {
+    //         key = 'd' + (i - 10).toString();
+    //     }
+    //     roomInfo.players[1].cardsOnHand.set(key, 0);
+    //     // roomInfo.players[2].cardsOnHand.set(key, 0);
+    //
+    // }
     // roomInfo.players[0].cardsOnHand.set('d5', 4);
     // roomInfo.players[0].cardsOnHand.set('x3', 3);
     // roomInfo.players[0].cardsOnHand.set('d2', 3);
@@ -75,15 +75,15 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[0].cardsOnHand.set('x10', 3);
     // roomInfo.players[0].cardsOnHand.set('x1', 3);
     // roomInfo.players[0].cardsOnHand.set('x8', 2);
-
-    roomInfo.players[1].cardsOnHand.set('d5', 4);
-    roomInfo.players[1].cardsOnHand.set('x3', 3);
-    roomInfo.players[1].cardsOnHand.set('d2', 2);
-    roomInfo.players[1].cardsOnHand.set('d7', 3);
-    roomInfo.players[1].cardsOnHand.set('d10', 3);
-    roomInfo.players[1].cardsOnHand.set('x10', 3);
-    roomInfo.players[1].cardsOnHand.set('x1', 3);
-    roomInfo.players[1].cardsOnHand.set('x8', 2);
+    //
+    // roomInfo.players[1].cardsOnHand.set('d5', 3);
+    // roomInfo.players[1].cardsOnHand.set('x3', 3);
+    // roomInfo.players[1].cardsOnHand.set('d2', 2);
+    // roomInfo.players[1].cardsOnHand.set('d7', 3);
+    // roomInfo.players[1].cardsOnHand.set('d10', 3);
+    // roomInfo.players[1].cardsOnHand.set('x10', 3);
+    // roomInfo.players[1].cardsOnHand.set('x1', 3);
+    // roomInfo.players[1].cardsOnHand.set('x8', 3);
     // roomInfo.players[2].cardsOnHand.set('d5', 4);
     // roomInfo.players[2].cardsOnHand.set('x3', 3);
     // roomInfo.players[2].cardsOnHand.set('d2', 3);
@@ -117,7 +117,7 @@ exports.init_game = (room_id) => {
 };
 
 exports.check_ti_valid = (cardsOnHand, card) => {
-    return cardsOnHand.has(card) && cardsOnHand.get(card) === 4;
+    return (cardsOnHand.has(card) && cardsOnHand.get(card) === 4) || (cardsOnHand.has(card) && cardsOnHand.get(card) === 3);
 };
 
 exports.check_pao_valid = (cardsOnHand, card) => {
@@ -602,7 +602,7 @@ exports.check_ti_wei_pao = (op_seat_id, players, dealed_card) => {
         if (res) {
             let type = i === op_seat_id ? 'ti' : 'pao';
             let cards = ['back', 'back', 'back', dealed_card];
-            if (from_wei_or_peng === 2) {
+            if (type === 'pao') {
                 cards = [dealed_card, dealed_card, dealed_card, dealed_card];
             }
             return {
