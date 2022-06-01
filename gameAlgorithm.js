@@ -496,7 +496,7 @@ let checkHuHelper = function(cardsOnHand, alreadyNeedJiang, currentXi, cardsAlre
     if (!alreadyNeedJiang) {
         alreadyNeedJiang = tiResult.length > 0;
     }
-    for (ti of tiResult) {
+    for (let ti of tiResult) {
         groupResult.push({
             cards: [ti, ti, ti, ti],
             type: 'ti',
@@ -506,7 +506,7 @@ let checkHuHelper = function(cardsOnHand, alreadyNeedJiang, currentXi, cardsAlre
         tempCardSet.set(ti, 0);
     }
     let weiResult = exports.checkWei(null, tempCardSet);
-    for (wei of weiResult) {
+    for (let wei of weiResult) {
         groupResult.push({
             cards: [wei, wei, wei],
             type: 'wei',
@@ -530,7 +530,7 @@ let checkHuHelper = function(cardsOnHand, alreadyNeedJiang, currentXi, cardsAlre
                 tempCardSet.set(key, 0);
                 let finalResult = [], currentResult = [];
                 groupCardsBy3Dfs(tempCardSet, numOfCards - 2, finalResult, currentResult);
-                for (res of finalResult) {
+                for (let res of finalResult) {
                     let calcResult = calculateFanAndTun(groupResult, res);
                     if (!maxHu || (calcResult.status === true
                         && calcResult.fan * calcResult.tun > maxHu.fan * maxHu.tun)) {
@@ -545,7 +545,7 @@ let checkHuHelper = function(cardsOnHand, alreadyNeedJiang, currentXi, cardsAlre
             // hu without jiang
             let finalResult = [], currentResult = [];
             groupCardsBy3Dfs(tempCardSet, numOfCards, finalResult, currentResult);
-            for (res of finalResult) {
+            for (let res of finalResult) {
                 let calcResult = calculateFanAndTun(groupResult, res);
                 if (!maxHu || (calcResult.status === true
                     && calcResult.fan * calcResult.tun > maxHu.fan * maxHu.tun)) {
@@ -569,7 +569,7 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
         JSON.stringify(Array.from(cardsOnHand))
     ));
     if (currentCard) {
-        tempCardSet.set(card, tempCardSet.get(currentCard) + 1);
+        tempCardSet.set(currentCard, tempCardSet.get(currentCard) + 1);
     }
     let sumOfCardOnHand = 0;
     for (const a of cardsOnHand.entries()) {
