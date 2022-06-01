@@ -48,7 +48,8 @@ let assign_cards_when_game_start = (roomInfo) => {
         roomInfo.players[1].cardsOnHand.set(key, 0);
         roomInfo.players[2].cardsOnHand.set(key, 0);
     }
-    for (let i = 0; i < 61; ) {
+    let cnt = [0, 0, 0];
+    for (let i = 0; i < 60; ) {
         for (let j = 0; j < 3; ++j, ++i) {
             if (i === 60) {
             }
@@ -58,6 +59,10 @@ let assign_cards_when_game_start = (roomInfo) => {
             );
         }
     }
+    roomInfo.players[0].cardsOnHand.set(
+        roomInfo.current_hole_cards[60],
+        roomInfo.players[0].cardsOnHand.get(roomInfo.current_hole_cards[60]) + 1
+    );
     // for (let i = 1; i <= 20; ++i) {
     //     let key = 'x' + i.toString();
     //     if (i > 10) {
