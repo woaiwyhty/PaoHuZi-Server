@@ -46,6 +46,7 @@ exports.create_room = (username, rounds) => {
         room_id: room_id,
         created_user: username,
         created_time: Date.now(),
+        last_join_seat_id: 0,
         current_played_games: 0,
         num_of_players: 0,
         current_status: {

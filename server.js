@@ -200,6 +200,7 @@ exports.start = function(conf, mgr){
             socket.seat_id = join_result.seat_id;
             socket.already_exited = false;
             socket.room_info = roomManager.get_room_info(data.room_id);
+            socket.room_info.last_join_seat_id = join_result.seat_id;
 
             userSocketMap.set(socket.username, socket);
             let other_player = roomManager.get_other_players(data.username, data.room_id);
@@ -224,7 +225,7 @@ exports.start = function(conf, mgr){
         });
 
         socket.on('ifGameReady', (data) => {
-            if (gameAlgorithm.check_if_game_can_start(socket.room_id)) {
+            if (gameAlgorithm.check_if_game_can_start(socket.room_id) && socket.seat_id === socket.room_info.last_join_seat_id) {
                 gameAlgorithm.init_game(socket.room_id)
                 // console.log(socket.playerInfo);
                 let roomInfo = roomManager.get_room_info(socket.room_id);
