@@ -594,18 +594,20 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
 exports.check_ti_wei_pao = (op_seat_id, players, dealed_card) => {
     for (let i = 0; i < 3; ++i) {
         let res = false, from_wei_or_peng = 0;
+        let type = '';
         if (players[i].cardsOnHand.get(dealed_card) === 3) {
             res = true;
+            type = op_seat_id === i ? 'ti' : 'pao';
         }
         for (let usedCard of players[i].cardsAlreadyUsed) {
             if (['wei', 'peng'].indexOf(usedCard.type) >= 0 && usedCard.cards[2] === dealed_card) {
                 res = true;
                 from_wei_or_peng = usedCard.type === 'wei' ? 1 : 2;
+                type = (op_seat_id === i && from_wei_or_peng === 1) ? 'ti' : 'pao';
                 break;
             }
         }
         if (res) {
-            let type = i === op_seat_id ? 'ti' : 'pao';
             let cards = ['back', 'back', 'back', dealed_card];
             if (type === 'pao') {
                 cards = [dealed_card, dealed_card, dealed_card, dealed_card];

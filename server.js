@@ -429,52 +429,51 @@ exports.start = function(conf, mgr){
                 return;
             }
             console.log('ti received  ', data);
-            if (gameAlgorithm.check_ti_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
-                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
-                let cards = ['back', 'back', 'back', data.opCard];
-                if (data.from_wei_or_peng > 0) {
-                    for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
-                        if (usedCards.type === 'wei' && usedCards.cards[2] === data.opCard) {
-                            usedCards.type = 'ti';
-                            usedCards.xi += 6;
-                            usedCards.cards = cards;
-                            socket.playerInfo.xi += 6;
-                        }
+            // TODO: check ti valid
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+            let cards = ['back', 'back', 'back', data.opCard];
+            if (data.from_wei_or_peng > 0) {
+                for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
+                    if (usedCards.type === 'wei' && usedCards.cards[2] === data.opCard) {
+                        usedCards.type = 'ti';
+                        usedCards.xi += 6;
+                        usedCards.cards = cards;
+                        socket.playerInfo.xi += 6;
                     }
-                } else {
-                    let xi = gameAlgorithm.calculate_xi('ti', data.opCard);
-                    socket.playerInfo.cardsAlreadyUsed.push({
-                        type: 'ti',
-                        cards: [data.opCard, data.opCard, data.opCard, data.opCard],
-                        xi: xi,
-                    })
-                    socket.playerInfo.xi += xi;
-                    socket.playerInfo.cardsOnHand.set(data.opCard, 0);
                 }
-                socket.playerInfo.ti_pao_counter++;
-                broadcast_information('other_player_action', {
-                    errcode: 0,
-                    op_seat_id: socket.playerInfo.seat_id,
+            } else {
+                let xi = gameAlgorithm.calculate_xi('ti', data.opCard);
+                socket.playerInfo.cardsAlreadyUsed.push({
                     type: 'ti',
-                    needsHide: data.needsHide,
-                    cards: cards,
-                    from_wei_or_peng: data.from_wei_or_peng,
-                    xi: socket.playerInfo.xi,
-                }, other_player);
+                    cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                    xi: xi,
+                })
+                socket.playerInfo.xi += xi;
+                socket.playerInfo.cardsOnHand.set(data.opCard, 0);
+            }
+            socket.playerInfo.ti_pao_counter++;
+            broadcast_information('other_player_action', {
+                errcode: 0,
+                op_seat_id: socket.playerInfo.seat_id,
+                type: 'ti',
+                needsHide: data.needsHide,
+                cards: cards,
+                from_wei_or_peng: data.from_wei_or_peng,
+                xi: socket.playerInfo.xi,
+            }, other_player);
 
-                let roomInfo = roomManager.get_room_info(socket.room_id);
-                if (!roomInfo.at_the_beginning) {
-                    setTimeout(() => {
-                        if (socket.playerInfo.ti_pao_counter === 1) {
-                            roomInfo.next_instruction.seat_id = socket.seat_id;
-                            roomInfo.next_instruction.type = 0; // need shoot
-                        } else {
-                            roomInfo.next_instruction.seat_id = (socket.seat_id + 1) % 3;
-                            roomInfo.next_instruction.type = 1; // deal a card
-                        }
-                        process_to_next_instruction(roomInfo, roomManager);
-                    }, action_delay);
-                }
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            if (!roomInfo.at_the_beginning) {
+                setTimeout(() => {
+                    if (socket.playerInfo.ti_pao_counter === 1) {
+                        roomInfo.next_instruction.seat_id = socket.seat_id;
+                        roomInfo.next_instruction.type = 0; // need shoot
+                    } else {
+                        roomInfo.next_instruction.seat_id = (socket.seat_id + 1) % 3;
+                        roomInfo.next_instruction.type = 1; // deal a card
+                    }
+                    process_to_next_instruction(roomInfo, roomManager);
+                }, action_delay);
             }
         });
 
@@ -510,51 +509,50 @@ exports.start = function(conf, mgr){
                 return;
             }
 
-            if (gameAlgorithm.check_pao_valid(socket.playerInfo.cardsOnHand, data.opCard)) {
-                let other_player = roomManager.get_other_players(socket.username, socket.room_id);
-                let newXi = gameAlgorithm.calculate_xi('pao', data.opCard);
-                if (data.from_wei_or_peng > 0) {
-                    for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
-                        if (['wei', 'peng'].indexOf(usedCards.type)
-                            && usedCards.cards[2] === data.opCard) {
-                            usedCards.type = 'pao';
-                            usedCards.cards = data.cards;
-                            socket.playerInfo.xi += (newXi - usedCards.xi);
-                            usedCards.xi = newXi;
-                        }
+            // TODO: check pao valid
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+            let newXi = gameAlgorithm.calculate_xi('pao', data.opCard);
+            if (data.from_wei_or_peng > 0) {
+                for (let usedCards of socket.playerInfo.cardsAlreadyUsed) {
+                    if (['wei', 'peng'].indexOf(usedCards.type)
+                        && usedCards.cards[2] === data.opCard) {
+                        usedCards.type = 'pao';
+                        usedCards.cards = data.cards;
+                        socket.playerInfo.xi += (newXi - usedCards.xi);
+                        usedCards.xi = newXi;
                     }
-                } else {
-                    socket.playerInfo.cardsAlreadyUsed.push({
-                        type: 'pao',
-                        cards: [data.opCard, data.opCard, data.opCard, data.opCard],
-                        xi: newXi,
-                    })
-                    socket.playerInfo.xi += newXi;
-                    socket.playerInfo.cardsOnHand.set(data.opCard, 0);
                 }
-
-                socket.playerInfo.ti_pao_counter++;
-                broadcast_information('other_player_action', {
-                    errcode: 0,
-                    op_seat_id: socket.playerInfo.seat_id,
+            } else {
+                socket.playerInfo.cardsAlreadyUsed.push({
                     type: 'pao',
-                    cards: data.cards,
-                    from_wei_or_peng: data.from_wei_or_peng,
-                    xi: socket.playerInfo.xi,
-                }, other_player);
-
-                let roomInfo = roomManager.get_room_info(socket.room_id);
-                setTimeout(() => {
-                    if (socket.playerInfo.ti_pao_counter === 1) {
-                        roomInfo.next_instruction.seat_id = socket.seat_id;
-                        roomInfo.next_instruction.type = 0; // need shoot
-                    } else {
-                        roomInfo.next_instruction.seat_id = (socket.seat_id + 1) % 3;
-                        roomInfo.next_instruction.type = 1; // deal a card
-                    }
-                    process_to_next_instruction(roomInfo, roomManager);
-                }, action_delay);
+                    cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                    xi: newXi,
+                })
+                socket.playerInfo.xi += newXi;
+                socket.playerInfo.cardsOnHand.set(data.opCard, 0);
             }
+
+            socket.playerInfo.ti_pao_counter++;
+            broadcast_information('other_player_action', {
+                errcode: 0,
+                op_seat_id: socket.playerInfo.seat_id,
+                type: 'pao',
+                cards: data.cards,
+                from_wei_or_peng: data.from_wei_or_peng,
+                xi: socket.playerInfo.xi,
+            }, other_player);
+
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            setTimeout(() => {
+                if (socket.playerInfo.ti_pao_counter === 1) {
+                    roomInfo.next_instruction.seat_id = socket.seat_id;
+                    roomInfo.next_instruction.type = 0; // need shoot
+                } else {
+                    roomInfo.next_instruction.seat_id = (socket.seat_id + 1) % 3;
+                    roomInfo.next_instruction.type = 1; // deal a card
+                }
+                process_to_next_instruction(roomInfo, roomManager);
+            }, action_delay);
         });
 
         socket.on('wei', (data) => {
