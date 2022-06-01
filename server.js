@@ -271,6 +271,7 @@ exports.start = function(conf, mgr){
                 from_wei_or_peng: 0,
                 xi: mysocket.playerInfo.xi,
             };
+            mysocket.playerInfo.cardsOnHand.set(pengResult.opCard, 0);
             broadcast_information('other_player_action', data, other_player);
             mysocket.emit('self_action_result', data);
         };
@@ -278,6 +279,9 @@ exports.start = function(conf, mgr){
         let chiCheckout = (chiResult, other_player, mysocket) => {
             for (let cards of chiResult.manyCards) {
                 mysocket.playerInfo.xi += gameAlgorithm.calculate_xi('chi', cards);
+                for (let card of cards) {
+                    mysocket.playerInfo.cardsOnHand.set(card, mysocket.playerInfo.cardsOnHand.get(card) - 1);
+                }
             }
 
             const data = {
