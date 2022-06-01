@@ -471,6 +471,7 @@ let calculateFanAndTun = function(cardsAlreadyUsed, resultFromGroup3) {
     }
     return {
         status: true,
+        cardsGroups: all,
         fan: fan,
         tun: parseInt((sumOfXi - 12) / 3),
         xi: sumOfXi,
