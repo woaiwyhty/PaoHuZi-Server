@@ -323,7 +323,7 @@ exports.start = function(conf, mgr){
                         } else {
                             priority[next_instruction.seat_id] = 0;
                             priority[(next_instruction.seat_id + 1) % 3] = 1;
-                            roomManager.init_new_session(roomInfo.current_status, [], 3, dealed_card, next_instruction.seat_id);
+                            roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, next_instruction.seat_id);
                         }
                         broadcast_information('dealed_card', {
                             errcode: 0,
