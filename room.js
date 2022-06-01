@@ -208,7 +208,7 @@ exports.selectHighestPriorityWithoutGuo = (current_status) => {
         let info = current_status.respondedUser[i];
         if (info !== null && info.type !== 'guo') {
             let pa = typePriority[info.type];
-            let pb = typePriority[current_status.respondedUser[highestPriorityPlayerId].type];
+            let pb = highestPriorityPlayerId === null ? 10 : typePriority[current_status.respondedUser[highestPriorityPlayerId].type];
             if (highestPriorityPlayerId === null || pa < pb ||
                 (current_status.priority[i] < highestPriority && pa === pb)) {
                 highestPriority = current_status.priority[i];
