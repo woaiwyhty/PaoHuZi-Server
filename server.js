@@ -225,7 +225,8 @@ exports.start = function(conf, mgr){
         });
 
         socket.on('ifGameReady', (data) => {
-            if (gameAlgorithm.check_if_game_can_start(socket.room_id) && socket.seat_id === socket.room_info.last_join_seat_id) {
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            if (gameAlgorithm.check_if_game_can_start(socket.room_id) && socket.seat_id === roomInfo.last_join_seat_id) {
                 gameAlgorithm.init_game(socket.room_id)
                 // console.log(socket.playerInfo);
                 let roomInfo = roomManager.get_room_info(socket.room_id);
