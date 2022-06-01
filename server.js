@@ -265,7 +265,7 @@ exports.start = function(conf, mgr){
             mysocket.playerInfo.xi += gameAlgorithm.calculate_xi('peng', pengResult.opCard);
             const data = {
                 errcode: 0,
-                op_seat_id: socket.playerInfo.seat_id,
+                op_seat_id: mysocket.playerInfo.seat_id,
                 type: 'peng',
                 cards: [pengResult.opCard, pengResult.opCard, pengResult.opCard],
                 from_wei_or_peng: 0,
@@ -286,7 +286,7 @@ exports.start = function(conf, mgr){
 
             const data = {
                 errcode: 0,
-                op_seat_id: socket.playerInfo.seat_id,
+                op_seat_id: mysocket.playerInfo.seat_id,
                 type: 'chi',
                 manyCards: chiResult.manyCards,
                 xi: mysocket.playerInfo.xi,
