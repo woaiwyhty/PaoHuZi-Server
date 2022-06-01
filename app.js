@@ -1,4 +1,4 @@
-var HALL_IP = "43.138.67.153";
+var HALL_IP = "0.0.0.0";
 var HALL_CLIENT_PORT = 9001;
 var HALL_ROOM_PORT = 9002;
 
