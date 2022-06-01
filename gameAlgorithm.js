@@ -369,7 +369,7 @@ let groupCardsBy3Dfs = function(cardsOnHand, numOfCards, finalResult, currentRes
                 groupCardsBy3Dfs(cardsOnHand, numOfCards - 3, finalResult, newResult);
                 // console.log("after group   ", possibility);
 
-                for (oneCard of possibility) {
+                for (let oneCard of possibility) {
                     cardsOnHand.set(oneCard, cardsOnHand.get(oneCard) + 1);
                 }
             }
@@ -576,13 +576,13 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
         sumOfCardOnHand += a[1];
     }
     let currentXi = 0, needJiang = false;
-    for (cardsUsed of cardsAlreadyUsed) {
+    for (let cardsUsed of cardsAlreadyUsed) {
         currentXi += cardsUsed.xi;
         if (['pao', 'ti'].indexOf(cardsUsed.type) >= 0) {
             needJiang = true;
         }
     }
-    let resultForJiangHu = checkHuHelper(cardsOnHand, needJiang, currentXi, cardsAlreadyUsed);
+    let resultForJiangHu = checkHuHelper(tempCardSet, needJiang, currentXi, cardsAlreadyUsed);
     if (resultForJiangHu && sumOfCardOnHand === 1) {
         resultForJiangHu.huInfo.push("耍猴");
         resultForJiangHu.fan += 8;

@@ -275,7 +275,7 @@ exports.start = function(conf, mgr){
 
             mysocket.playerInfo.cardsAlreadyUsed.push({
                 type: 'peng',
-                cards: [data.opCard, data.opCard, data.opCard],
+                cards: [pengResult.opCard, pengResult.opCard, pengResult.opCard],
                 xi: current_xi,
             })
             mysocket.playerInfo.cardsOnHand.set(pengResult.opCard, 0);
