@@ -262,7 +262,8 @@ exports.start = function(conf, mgr){
         };
 
         let pengCheckout = (pengResult, other_player, mysocket) => {
-            mysocket.playerInfo.xi += gameAlgorithm.calculate_xi('peng', pengResult.opCard);
+            let current_xi = gameAlgorithm.calculate_xi('peng', pengResult.opCard);
+            mysocket.playerInfo.xi += current_xi;
             const data = {
                 errcode: 0,
                 op_seat_id: mysocket.playerInfo.seat_id,
@@ -271,6 +272,12 @@ exports.start = function(conf, mgr){
                 from_wei_or_peng: 0,
                 xi: mysocket.playerInfo.xi,
             };
+
+            mysocket.playerInfo.cardsAlreadyUsed.push({
+                type: 'peng',
+                cards: [data.opCard, data.opCard, data.opCard],
+                xi: current_xi,
+            })
             mysocket.playerInfo.cardsOnHand.set(pengResult.opCard, 0);
             broadcast_information('other_player_action', data, other_player);
             mysocket.emit('self_action_result', data);
@@ -278,10 +285,16 @@ exports.start = function(conf, mgr){
 
         let chiCheckout = (chiResult, other_player, mysocket) => {
             for (let cards of chiResult.manyCards) {
-                mysocket.playerInfo.xi += gameAlgorithm.calculate_xi('chi', cards);
+                let xi = gameAlgorithm.calculate_xi('chi', cards);
+                mysocket.playerInfo.xi += xi;
                 for (let card of cards) {
                     mysocket.playerInfo.cardsOnHand.set(card, mysocket.playerInfo.cardsOnHand.get(card) - 1);
                 }
+                mysocket.playerInfo.cardsAlreadyUsed.push({
+                    type: 'chi',
+                    cards: cards,
+                    xi: xi,
+                })
             }
 
             const data = {
@@ -663,7 +676,7 @@ exports.start = function(conf, mgr){
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
             let priority = [0, 0, 0];
             priority[socket.seat_id] = 2;
-            roomManager.init_new_session(roomInfo.current_status, priority, 2);
+            roomManager.init_new_session(roomInfo.current_status, priority, 2, data.opCard, socket.playerInfo.seat_id);
             broadcast_information('other_player_shoot', {
                 errcode: 0,
                 op_seat_id: socket.playerInfo.seat_id,
