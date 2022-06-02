@@ -157,7 +157,7 @@ exports.start = function(conf, mgr){
         };
 
         let broadcast_information = (message, data, userlists) => {
-            console.log('broadcast_information   ', message, data);
+            console.log('broadcast_information   ', message, data, userlists);
             for (let i = 0; i < userlists.length; ++i) {
                 if (userSocketMap.has(userlists[i].username)) {
                     userSocketMap.get(userlists[i].username).emit(message, data);
