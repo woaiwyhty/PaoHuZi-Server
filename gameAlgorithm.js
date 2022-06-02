@@ -10,7 +10,7 @@ exports.check_if_game_can_start = (room_id) => {
         return false;
     }
 
-    for (player of roomInfo.players) {
+    for (let player of roomInfo.players) {
         if (player.ready === false || player.online === false) {
             return false;
         }
@@ -48,7 +48,6 @@ let assign_cards_when_game_start = (roomInfo) => {
         roomInfo.players[1].cardsOnHand.set(key, 0);
         roomInfo.players[2].cardsOnHand.set(key, 0);
     }
-    let cnt = [0, 0, 0];
     for (let i = 0; i < 60; ) {
         for (let j = 0; j < 3; ++j, ++i) {
             if (i === 60) {
@@ -106,7 +105,7 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[1].card21st = roomInfo.current_hole_cards[60];
     // roomInfo.players[2].card21st = roomInfo.current_hole_cards[60];
 
-    roomInfo.current_hole_cards_cursor = 61;
+    roomInfo.current_hole_cards_cursor = 78;
     // roomInfo.current_hole_cards.splice(0, 61);
 }
 
@@ -116,6 +115,29 @@ exports.init_game = (room_id) => {
         return false;
     }
 
+    for (let i = 0; i < 3; ++i) {
+        roomInfo.players[i].cardsOnHand = new Map();
+        roomInfo.players[i].cardsDiscarded = [];
+        roomInfo.players[i].cardsAlreadyUsed = [];
+        roomInfo.players[i].cardsChooseToNotUsed = [];
+        roomInfo.players[i].ti_pao_counter = 0;
+        roomInfo.players[i].card21st = '';
+        roomInfo.players[i].xi = 0;
+    }
+    roomInfo.at_the_beginning = false;
+    roomInfo.current_status = {
+        session_key: 0,
+        priority: [2, 2, 2],
+        respondedUser: [null, null, null],
+        respondedNums: 0,
+        numOfRequiredResponse: 0,
+        op_card: '',
+        dealed_seat_id: -1,
+    };
+    roomInfo.next_instruction = {
+        seat_id: 0,
+        type: 0, // 0: shoot card, 1: deal card
+    };
     roomInfo.current_hole_cards = shuffle(generateAllCardSet());
     assign_cards_when_game_start(roomInfo);
     roomInfo.current_played_games += 1;
@@ -317,6 +339,16 @@ exports.checkChi = function(card, cardsOnHand) {
         finalResult = finalResult.sort().filter((item, pos, array) => {
             return !pos || item.toString() !== array[pos - 1].toString();
         });
+        for (let result of finalResult) {
+            for (let item of result) {
+                for (let i = 0; i < 2; ++i) {
+                    if (item[i] === card) {
+                        item[i] = item[2];
+                        item[2] = card;
+                    }
+                }
+            }
+        }
     }
     return {
         status: finalResult.length > 0,
