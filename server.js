@@ -363,7 +363,7 @@ exports.start = function(conf, mgr){
                             setTimeout(function() {
                                 broadcast_information('askGameReady', {
                                     errcode: 0,
-                                }, [roomInfo.players[roomInfo.last_join_seat_id].username]);
+                                }, [roomInfo.players[roomInfo.last_join_seat_id]]);
                             }, 5000)
                         }
 
@@ -689,7 +689,7 @@ exports.start = function(conf, mgr){
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
             if (roomInfo.current_status.dealed_seat_id !== -1) {
-                socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.cardsChooseToNotUsed);
+                socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.op_card);
             }
             if (roomInfo.current_status.numOfRequiredResponse === 0) {
                 process_to_next_instruction(roomInfo);
@@ -711,6 +711,8 @@ exports.start = function(conf, mgr){
             if (!userId || (data.type !== 'onHand' && data.type !== 'onDeal') || !gameAlgorithm.check_card_valid(data.opCard)) {
                 return;
             }
+            socket.playerInfo.cardsChooseToNotUsed.push(data.opCard);
+
             let roomInfo = roomManager.get_room_info(socket.room_id);
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
             let priority = [0, 0, 0];
