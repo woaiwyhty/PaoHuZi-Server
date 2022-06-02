@@ -280,7 +280,7 @@ exports.start = function(conf, mgr){
                 setTimeout(function() {
                     broadcast_information('askGameReady', {
                         errcode: 0,
-                    }, [roomInfo.players[roomInfo.last_join_seat_id].username]);
+                    }, [roomInfo.players[roomInfo.last_join_seat_id]]);
                 }, 5000)
             }
         };
