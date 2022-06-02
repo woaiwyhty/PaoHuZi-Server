@@ -105,7 +105,7 @@ let assign_cards_when_game_start = (roomInfo) => {
     // roomInfo.players[1].card21st = roomInfo.current_hole_cards[60];
     // roomInfo.players[2].card21st = roomInfo.current_hole_cards[60];
 
-    roomInfo.current_hole_cards_cursor = 78;
+    roomInfo.current_hole_cards_cursor = 61;
     // roomInfo.current_hole_cards.splice(0, 61);
 }
 
@@ -194,13 +194,14 @@ const cardRed = ['x2', 'x7', 'x10', 'd2', 'd7', 'd10'];
 exports.calculate_xi = (type, card) => {
     let key;
     if (Array.isArray(card)) {
-        card.sort();
-        if (card.toString() === ['d1', 'd2', 'd3'].toString() ||
-            card.toString() === ['d2', 'd7', 'd10'].toString()) {
+        let mycard = Array.from(card);
+        mycard.sort();
+        if (mycard.toString() === ['d1', 'd2', 'd3'].toString() ||
+            mycard.toString() === ['d10', 'd2', 'd7'].toString()) {
             return 6;
         }
-        if (card.toString() === ['x1', 'x2', 'x3'].toString() ||
-            card.toString() === ['x2', 'x7', 'x10'].toString()) {
+        if (mycard.toString() === ['x1', 'x2', 'x3'].toString() ||
+            mycard.toString() === ['x10', 'x2', 'x7'].toString()) {
             return 3;
         }
         return 0;
