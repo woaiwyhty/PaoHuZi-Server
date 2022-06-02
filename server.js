@@ -355,6 +355,7 @@ exports.start = function(conf, mgr){
                             loseMark: 0,
                             cardsGroups: [],
                             holeCards: [],
+                            afterScore: afterScore,
                             lastGame: roomInfo.current_played_games === roomInfo.total_games,
                             nicknames: [roomInfo.players[0].nickname, roomInfo.players[1].nickname, roomInfo.players[2].nickname],
                         }, roomInfo.players);
