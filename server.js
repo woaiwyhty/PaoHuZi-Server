@@ -248,6 +248,16 @@ exports.start = function(conf, mgr){
 
         let huCheckout = (huResult, other_player, mysocket, roomInfo) => {
             const holeCards = roomInfo.current_hole_cards.slice(roomInfo.current_hole_cards_cursor)
+            const loseMark = huResult.fan * huResult.tun;
+            for (let i = 0; i < 3; ++i) {
+                if (i === mysocket.playerInfo.seat_id) {
+                    roomInfo.players[i].score += (2 * loseMark);
+                } else {
+                    roomInfo.players[i].score -= (loseMark);
+                }
+            }
+            let afterScore = [roomInfo.players[0].score, roomInfo.players[1].score, roomInfo.players[2].score];
+
             const data = {
                 errcode: 0,
                 op_seat_id: mysocket.playerInfo.seat_id,
@@ -256,11 +266,23 @@ exports.start = function(conf, mgr){
                 xi: huResult.xi,
                 fan: huResult.fan,
                 tun: huResult.tun,
+                loseMark: huResult.fan * huResult.tun,
+                afterScore: afterScore,
+                nicknames: [roomInfo.players[0].nickname, roomInfo.players[1].nickname, roomInfo.players[2].nickname],
                 huInfo: huResult.huInfo,
                 holeCards: holeCards,
+                lastGame: roomInfo.current_played_games === roomInfo.total_games,
             };
             broadcast_information('other_player_hu', data, other_player);
             mysocket.emit('self_action_result', data);
+
+            if (roomInfo.current_played_games < roomInfo.total_games) {
+                setTimeout(function() {
+                    broadcast_information('askGameReady', {
+                        errcode: 0,
+                    }, [roomInfo.players[roomInfo.last_join_seat_id].username]);
+                }, 5000)
+            }
         };
 
         let pengCheckout = (pengResult, other_player, mysocket) => {
@@ -323,11 +345,28 @@ exports.start = function(conf, mgr){
                     }, roomInfo.players);
                 } else if (next_instruction.type === 1) {
                     if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
+                        let afterScore = [roomInfo.players[0].score, roomInfo.players[1].score, roomInfo.players[2].score];
                         // wang hu
                         broadcast_information('wang_hu', {
                             errcode: 0,
+                            op_seat_id: -1,
+                            type: "wang_hu",
+                            huInfo: ["亡胡"],
+                            loseMark: 0,
+                            cardsGroups: [],
+                            holeCards: [],
+                            lastGame: roomInfo.current_played_games === roomInfo.total_games,
+                            nicknames: [roomInfo.players[0].nickname, roomInfo.players[1].nickname, roomInfo.players[2].nickname],
                         }, roomInfo.players);
                         roomInfo.number_of_wang += 1;
+                        if (roomInfo.current_played_games < roomInfo.total_games) {
+                            setTimeout(function() {
+                                broadcast_information('askGameReady', {
+                                    errcode: 0,
+                                }, [roomInfo.players[roomInfo.last_join_seat_id].username]);
+                            }, 5000)
+                        }
+
                     } else {
                         let dealed_card = roomInfo.current_hole_cards[roomInfo.current_hole_cards_cursor++];
                         let result = gameAlgorithm.check_ti_wei_pao(next_instruction.seat_id, roomInfo.players, dealed_card);
