@@ -689,7 +689,7 @@ exports.start = function(conf, mgr){
             }
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
-            if (roomInfo.current_status.dealed_seat_id !== -1) {
+            if (roomInfo.current_status.dealed_seat_id !== -1 && data.isDoneByUser === true) {
                 socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.op_card);
             }
             if (roomInfo.current_status.numOfRequiredResponse === 0) {
