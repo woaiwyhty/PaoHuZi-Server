@@ -183,30 +183,68 @@ exports.start = function(conf, mgr){
             }
 
             let nickname = accountManager.get_nick_name(data.username);
-            let join_result = roomManager.join_room(data.username, data.room_id, socket.handshake.address, nickname);
-            if (!join_result.status) {
-                socket.emit('login_result', { errcode: -1, errmsg: join_result.msg });
-                return;
-            }
 
+            socket.score = 0;
             socket.username = data.username;
             socket.nickname = nickname;
             socket.token = data.token;
             socket.room_id = parseInt(data.room_id);
             socket.ready = true;
-            socket.score = 0;
             socket.online = true;
             socket.ip = socket.handshake.address;
+
+            if (userSocketMap.has(data.username)) {
+                let oldSocket = userSocketMap.get(data.username);
+                let oldRoomId = oldSocket.room_id;
+                let roomInfo = roomManager.get_room_info(oldRoomId);
+                if (roomInfo !== null && roomInfo.in_game === true &&
+                    data.room_id === oldRoomId) {
+                    // relogin
+                    socket.score = oldSocket.score;
+                    socket.playerInfo = oldSocket.playerInfo;
+                    socket.playerInfo.online = true;
+                    socket.seat_id = oldSocket.seat_id;
+                    socket.room_info = {
+                        last_join_seat_id: oldSocket.seat_id,
+                    };
+                    userSocketMap.set(socket.username, socket);
+                    let data = {
+                        errcode: 0,
+                        relogin: true,
+                        errmsg: "ok",
+                        room_id: data.room_id,
+                        seat_id: oldSocket.seat_id,
+                        playersInfo: roomInfo.players,
+                    }
+                    let other_player = roomManager.get_other_players(data.username, data.room_id);
+                    broadcast_information('new_player_entered_room', {
+                        username: data.username,
+                        nickname: nickname,
+                        relogin: true,
+                        seat_id: oldSocket.seat_id,
+                    }, other_player);
+
+                    socket.emit('login_result', data);
+                    return;
+                }
+            }
+
+            let join_result = roomManager.join_room(data.username, data.room_id, socket.handshake.address, nickname);
+            if (!join_result.status) {
+                socket.emit('login_result', { errcode: -1, errmsg: join_result.msg });
+                return;
+            }
             socket.seat_id = join_result.seat_id;
-            socket.already_exited = false;
-            socket.room_info = roomManager.get_room_info(data.room_id);
-            socket.room_info.last_join_seat_id = join_result.seat_id;
+            socket.room_info = {
+                last_join_seat_id: join_result.seat_id,
+            };
 
             userSocketMap.set(socket.username, socket);
             let other_player = roomManager.get_other_players(data.username, data.room_id);
             broadcast_information('new_player_entered_room', {
                 username: data.username,
                 nickname: nickname,
+                relogin: false,
                 seat_id: join_result.seat_id,
                 online: true,
                 ready: true,
@@ -215,6 +253,7 @@ exports.start = function(conf, mgr){
 
             socket.emit('login_result', {
                 errcode: 0,
+                relogin: false,
                 errmsg: "ok",
                 room_id: data.room_id,
                 seat_id: join_result.seat_id,
@@ -275,7 +314,7 @@ exports.start = function(conf, mgr){
             };
             broadcast_information('other_player_hu', data, other_player);
             mysocket.emit('self_action_result', data);
-
+            roomInfo.in_game = false;
             if (roomInfo.current_played_games < roomInfo.total_games) {
                 setTimeout(function() {
                     broadcast_information('askGameReady', {
@@ -360,6 +399,7 @@ exports.start = function(conf, mgr){
                             nicknames: [roomInfo.players[0].nickname, roomInfo.players[1].nickname, roomInfo.players[2].nickname],
                         }, roomInfo.players);
                         roomInfo.number_of_wang += 1;
+                        roomInfo.in_game = false;
                         if (roomInfo.current_played_games < roomInfo.total_games) {
                             setTimeout(function() {
                                 broadcast_information('askGameReady', {
@@ -751,7 +791,6 @@ exports.start = function(conf, mgr){
                 return;
             }
 
-            socket.already_exited = true;
             socket.emit('exit_result', { errcode: 0 });
         });
 
@@ -766,20 +805,22 @@ exports.start = function(conf, mgr){
             if (userSocketMap.get(userId) !== socket){
                 return;
             }
-
-            var broadcast_data = {
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            let broadcast_data = {
                 username: userId,
                 seat_id: socket.seat_id,
                 online: false,
-                already_exited: socket.already_exited,
+                completely_left: true,
             };
-
+            if (roomInfo.in_game) {
+                broadcast_data.completely_left = false;
+                roomInfo.players[socket.seat_id].online = false;
+            } else {
+                roomManager.leave_room(socket.username, socket.room_id);
+                userSocketMap.delete(userId);
+            }
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
-
             broadcast_information('other_player_exit', broadcast_data, other_player);
-            roomManager.leave_room(socket.username, socket.room_id);
-            userSocketMap.delete(userId);
-            socket.username = null;
         });
 
         socket.on('game_ping', function(data){

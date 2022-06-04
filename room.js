@@ -71,6 +71,7 @@ exports.create_room = (username, rounds) => {
         number_of_wang: 0,
         cancel_room_deadline_if_not_start: 180,
         current_on_turn_player_id: 0,
+        in_game: false,
     });
 
     exports.current_num_of_rooms += 1;

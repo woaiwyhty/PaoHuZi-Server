@@ -134,6 +134,7 @@ exports.init_game = (room_id) => {
         op_card: '',
         dealed_seat_id: -1,
     };
+    roomInfo.in_game = true;
     roomInfo.next_instruction = {
         seat_id: 0,
         type: 0, // 0: shoot card, 1: deal card
