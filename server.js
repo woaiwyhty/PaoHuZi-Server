@@ -86,7 +86,9 @@ exports.start = function(conf, mgr){
                 if (!accountManager.validate_online(req.query.username, req.query.token)) {
                     throw new Error('invalid token');
                 }
-                if (roomManager.check_user_in_room(req.query.username)) {
+                if (roomManager.check_rejoin(req.query.username, room_id)) {
+                    httpHandler.send(res, 0, "ok", { room_id: room_id });
+                } else if (roomManager.check_user_in_room(req.query.username)) {
                     httpHandler.send(res, 3, "user already in another room", { room_id: room_id });
                 } else if (!roomManager.check_room_exists(room_id)) {
                     httpHandler.send(res, 1, "room does not exist!", { room_id: room_id });
@@ -204,17 +206,21 @@ exports.start = function(conf, mgr){
                     socket.playerInfo = oldSocket.playerInfo;
                     socket.playerInfo.online = true;
                     socket.seat_id = oldSocket.seat_id;
-                    socket.room_info = {
-                        last_join_seat_id: oldSocket.seat_id,
-                    };
+                    roomInfo.last_join_seat_id = oldSocket.seat_id;
                     userSocketMap.set(socket.username, socket);
-                    let data = {
+                    let login_result_data = {
                         errcode: 0,
                         relogin: true,
                         errmsg: "ok",
                         room_id: data.room_id,
                         seat_id: oldSocket.seat_id,
                         playersInfo: roomInfo.players,
+                        numberOfHoleCards:
+                            roomInfo.current_hole_cards.length - roomInfo.current_hole_cards_cursor,
+                        cardsOnHand: Array.from(socket.playerInfo.cardsOnHand),
+                        number_of_wang: roomInfo.number_of_wang,
+                        current_played_games: roomInfo.current_played_games,
+                        total_games: roomInfo.total_games,
                     }
                     let other_player = roomManager.get_other_players(data.username, data.room_id);
                     broadcast_information('new_player_entered_room', {
@@ -224,7 +230,7 @@ exports.start = function(conf, mgr){
                         seat_id: oldSocket.seat_id,
                     }, other_player);
 
-                    socket.emit('login_result', data);
+                    socket.emit('login_result', login_result_data);
                     return;
                 }
             }
@@ -234,10 +240,9 @@ exports.start = function(conf, mgr){
                 socket.emit('login_result', { errcode: -1, errmsg: join_result.msg });
                 return;
             }
+            let roomInfo = roomManager.get_room_info(socket.room_id);
             socket.seat_id = join_result.seat_id;
-            socket.room_info = {
-                last_join_seat_id: join_result.seat_id,
-            };
+            roomInfo.last_join_seat_id = join_result.seat_id;
 
             userSocketMap.set(socket.username, socket);
             let other_player = roomManager.get_other_players(data.username, data.room_id);
@@ -603,6 +608,9 @@ exports.start = function(conf, mgr){
                         socket.playerInfo.xi += (newXi - usedCards.xi);
                         usedCards.xi = newXi;
                     }
+                    for (let i = 0; i < 4; ++i) {
+                        usedCards.cards[i] = data.cards;
+                    }
                 }
             } else {
                 socket.playerInfo.cardsAlreadyUsed.push({
@@ -812,14 +820,27 @@ exports.start = function(conf, mgr){
                 online: false,
                 completely_left: true,
             };
+            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
+
             if (roomInfo.in_game) {
                 broadcast_data.completely_left = false;
                 roomInfo.players[socket.seat_id].online = false;
+                let cnt = 0;
+                for (let player of other_player) {
+                    if (player.online === false) {
+                        ++cnt;
+                    }
+                }
+                if (cnt === 2) {
+                    for (let i = 0; i < 3; ++i) {
+                        userSocketMap.delete(roomInfo.players[i].username);
+                        roomManager.leave_room(roomInfo.players[i].username, socket.room_id);
+                    }
+                }
             } else {
                 roomManager.leave_room(socket.username, socket.room_id);
                 userSocketMap.delete(userId);
             }
-            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
             broadcast_information('other_player_exit', broadcast_data, other_player);
         });
 
