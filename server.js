@@ -9,8 +9,11 @@ const { check, oneOf, query, validationResult } = require('express-validator');
 
 const roomManager = require('./room');
 const gameAlgorithm = require('./gameAlgorithm');
+const playerActionHandler = require('./playerActionHandler');
+
 const {get_room_info} = require("./room");
 const action_delay = 2500;
+const operation_max_time = 3000;
 
 app.all('*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -28,6 +31,7 @@ exports.start = function(conf, mgr){
     httpHandler = require('./utils/httputil');
     io = require('socket.io')(httpServer);
     gameAlgorithm.init_room_manager(roomManager);
+    playerActionHandler.init(gameAlgorithm);
 
     httpServer.listen(config.CLEINT_PORT, config.HALL_IP, () => {
         console.log("listen on ", config.HALL_IP, config.CLEINT_PORT);
@@ -383,10 +387,17 @@ exports.start = function(conf, mgr){
                 let priority = [2, 2, 2];
                 console.log("process_to_next_instruction  ", roomInfo.next_instruction, roomInfo.current_status);
                 if (next_instruction.type === 0) {
+                    let target_player = [roomInfo.players[next_instruction.seat_id]];
                     broadcast_information('need_shoot', {
                         errcode: 0,
                         op_seat_id: next_instruction.seat_id
                     }, roomInfo.players);
+                    roomInfo.players[next_instruction.seat_id].operationTimer = setTimeout(() => {
+                        broadcast_information("request_shoot", {
+                            errcode: 0,
+                        }, target_player);
+                        roomInfo.players[next_instruction.seat_id].operationTimer = null;
+                        }, operation_max_time)
                 } else if (next_instruction.type === 1) {
                     if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
                         let afterScore = [roomInfo.players[0].score, roomInfo.players[1].score, roomInfo.players[2].score];
@@ -760,6 +771,8 @@ exports.start = function(conf, mgr){
             if (!userId || (data.type !== 'onHand' && data.type !== 'onDeal') || !gameAlgorithm.check_card_valid(data.opCard)) {
                 return;
             }
+            clearTimeout(socket.playerInfo.operationTimer);
+            socket.playerInfo.operationTimer = null;
             socket.playerInfo.cardsChooseToNotUsed.push(data.opCard);
 
             let roomInfo = roomManager.get_room_info(socket.room_id);

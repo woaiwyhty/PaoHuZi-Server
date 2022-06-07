@@ -153,7 +153,8 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
         ip: ip,
         score: 0,
         online: true,
-        ready: true
+        ready: true,
+        operationTimer: null,
     };
     exports.details.get(room_id).num_of_players += 1;
     user_room_map.set(username, room_id);
