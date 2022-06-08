@@ -13,7 +13,7 @@ const playerActionHandler = require('./playerActionHandler');
 
 const {get_room_info} = require("./room");
 const action_delay = 2500;
-const operation_max_time = 3000;
+const operation_max_time = 30000;
 
 app.all('*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -171,33 +171,14 @@ exports.start = function(conf, mgr){
             }
         };
 
-        let guo_handler = (data) => {
-            data = JSON.parse(data);
-            let userId = socket.username;
-            if (!userId) {
-                return;
-            }
-
-            let roomInfo = roomManager.get_room_info(socket.room_id);
-            if (roomInfo.current_status.dealed_seat_id !== -1 && data.isDoneByUser === true) {
-                socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.op_card);
-            }
-            if (roomInfo.current_status.numOfRequiredResponse === 0) {
-                process_to_next_instruction(roomInfo);
-            } else {
-                roomInfo.current_status.respondedNums += 1;
-                roomInfo.current_status.respondedUser[socket.seat_id] = {
-                    type: 'guo',
-                    data: data,
-                };
-                if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
-                    sessionCheckout(roomManager, roomInfo);
-                }
-            }
-        };
 
         let set_guo_timer = (playerInfo, sessionKey, op_card) => {
+            console.log("set_guo_timer  for  ", playerInfo.username)
+
             playerInfo.operationTimer = setTimeout(()=> {
+                if (playerInfo.operationTimer === null) {
+                    return;
+                }
                 broadcast_information("timer_passed", {
                     errcode: 0,
                     type: 'operation',
@@ -209,8 +190,8 @@ exports.start = function(conf, mgr){
                     seat_id: playerInfo.seat_id,
                     isDoneByUser: true,
                     sessionKey: sessionKey,
-                });
-            }, operation_max_time)
+                }, userSocketMap.get(playerInfo.username));
+            }, operation_max_time);
         };
 
         let set_shoot_card_timer = (playerInfo) => {
@@ -272,6 +253,7 @@ exports.start = function(conf, mgr){
                     socket.playerInfo = oldSocket.playerInfo;
                     socket.playerInfo.online = true;
                     socket.seat_id = oldSocket.seat_id;
+                    socket.operationTimer = oldSocket.operationTimer;
                     roomInfo.last_join_seat_id = oldSocket.seat_id;
                     userSocketMap.set(socket.username, socket);
                     let login_result_data = {
@@ -295,8 +277,11 @@ exports.start = function(conf, mgr){
                         relogin: true,
                         seat_id: oldSocket.seat_id,
                     }, other_player);
-
+                    console.log("broadcast_information for reconnection done", login_result_data)
                     socket.emit('login_result', login_result_data);
+
+                    console.log("socket emit for reconnection done")
+
                     return;
                 }
             }
@@ -387,10 +372,11 @@ exports.start = function(conf, mgr){
             mysocket.emit('self_action_result', data);
             roomInfo.in_game = false;
             if (roomInfo.current_played_games < roomInfo.total_games) {
+                let target = [roomInfo.players[roomInfo.last_join_seat_id]];
                 setTimeout(function() {
                     broadcast_information('askGameReady', {
                         errcode: 0,
-                    }, [roomInfo.players[roomInfo.last_join_seat_id]]);
+                    }, target);
                 }, 5000)
             }
         };
@@ -474,10 +460,11 @@ exports.start = function(conf, mgr){
                         roomInfo.number_of_wang += 1;
                         roomInfo.in_game = false;
                         if (roomInfo.current_played_games < roomInfo.total_games) {
+                            let target = [roomInfo.players[roomInfo.last_join_seat_id]];
                             setTimeout(function() {
                                 broadcast_information('askGameReady', {
                                     errcode: 0,
-                                }, [roomInfo.players[roomInfo.last_join_seat_id]]);
+                                }, target);
                             }, 5000)
                         }
 
@@ -492,6 +479,9 @@ exports.start = function(conf, mgr){
                             priority[next_instruction.seat_id] = 0;
                             priority[(next_instruction.seat_id + 1) % 3] = 1;
                             roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, next_instruction.seat_id);
+                            for (let i = 0; i < 3; ++i) {
+                                set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, dealed_card)
+                            }
                         }
                         broadcast_information('dealed_card', {
                             errcode: 0,
@@ -510,7 +500,7 @@ exports.start = function(conf, mgr){
 
         let sessionCheckout = (roomManager, roomInfo) => {
             let highestPriorityPlayerId = roomManager.selectHighestPriorityWithoutGuo(roomInfo.current_status);
-            // console.log('sessionCheckout  ', roomInfo.current_status, highestPriorityPlayerId)
+            console.log('sessionCheckout  ', roomInfo.current_status, highestPriorityPlayerId)
             if (highestPriorityPlayerId === null) {
                 if (roomInfo.current_status.op_card !== '') {
                     // send discarded dealed card
@@ -797,7 +787,44 @@ exports.start = function(conf, mgr){
             }
         });
 
-        socket.on('guo', guo_handler);
+        let guo_handler = (data, socket) => {
+            if (typeof data === 'string') {
+                data = JSON.parse(data);
+            }
+            let userId = socket.username;
+            if (!userId) {
+                return;
+            }
+
+            if (socket.playerInfo.operationTimer !== null) {
+                console.log("clear time out", socket.playerInfo.operationTimer);
+                clearTimeout(socket.playerInfo.operationTimer);
+                socket.playerInfo.operationTimer = null;
+            }
+            let roomInfo = roomManager.get_room_info(socket.room_id);
+            if (roomInfo.current_status.dealed_seat_id !== -1 && data.isDoneByUser === true) {
+                socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.op_card);
+            }
+            if (roomInfo.current_status.numOfRequiredResponse === 0) {
+                process_to_next_instruction(roomInfo);
+            } else {
+                if (roomInfo.current_status.respondedUser[socket.seat_id] !== null) {
+                    return;
+                }
+                roomInfo.current_status.respondedNums += 1;
+                roomInfo.current_status.respondedUser[socket.seat_id] = {
+                    type: 'guo',
+                    data: data,
+                };
+                if (roomInfo.current_status.respondedNums === roomInfo.current_status.numOfRequiredResponse) {
+                    sessionCheckout(roomManager, roomInfo);
+                }
+            }
+        };
+
+        socket.on('guo', (data) => {
+            guo_handler(data, socket);
+        });
 
         let shootCard_handler = (data, socket) => {
             if (typeof data === 'string') {
@@ -809,9 +836,10 @@ exports.start = function(conf, mgr){
             }
 
             socket.playerInfo.cardsOnHand.set(data.opCard, socket.playerInfo.cardsOnHand.get(data.opCard) - 1);
-            console.log("shootCard_handler  ", socket.playerInfo.seat_id, socket.playerInfo.username)
-            clearTimeout(socket.playerInfo.operationTimer);
-            socket.playerInfo.operationTimer = null;
+            if (socket.playerInfo.operationTimer !== null) {
+                clearTimeout(socket.playerInfo.operationTimer);
+                socket.playerInfo.operationTimer = null;
+            }
             socket.playerInfo.cardsChooseToNotUsed.push(data.opCard);
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
@@ -819,6 +847,11 @@ exports.start = function(conf, mgr){
             let priority = [0, 0, 0];
             priority[socket.seat_id] = 2;
             roomManager.init_new_session(roomInfo.current_status, priority, 2, data.opCard, socket.playerInfo.seat_id);
+            for (let i = 0; i < 3; ++i) {
+                if (i !== socket.seat_id) {
+                    set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, data.opCard)
+                }
+            }
             broadcast_information('other_player_shoot', {
                 errcode: 0,
                 op_seat_id: socket.playerInfo.seat_id,
