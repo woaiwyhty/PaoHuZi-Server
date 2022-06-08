@@ -171,6 +171,12 @@ exports.start = function(conf, mgr){
             }
         };
 
+        let clearTimer = (playerInfo) => {
+            if (playerInfo.operationTimer !== null) {
+                clearTimeout(playerInfo.operationTimer);
+                playerInfo.operationTimer = null;
+            }
+        }
 
         let set_guo_timer = (playerInfo, sessionKey, op_card) => {
             console.log("set_guo_timer  for  ", playerInfo.username)
@@ -213,6 +219,35 @@ exports.start = function(conf, mgr){
                 }
             }, operation_max_time)
         }
+
+        let process_dealed_card_ti_wei_pao = (playerInfo, ti_wei_pao_result) => {
+            if (ti_wei_pao_result.from_wei_or_peng) {
+                for (let cards of playerInfo.cardsAlreadyUsed) {
+                    if (['wei', 'peng'].indexOf(cards.type) >= 0
+                        && cards.cards[2] === ti_wei_pao_result.cards[cards.length - 1]) {
+                        playerInfo.xi -= cards.xi;
+                        cards.type = ti_wei_pao_result.type;
+                        if (ti_wei_pao_result.type === "pao") {
+                            for (let i = 0; i < 3; ++i) {
+                                cards.cards[i] = ti_wei_pao_result.opCard;
+                            }
+                        }
+                        cards.cards.push(ti_wei_pao_result.opCard);
+                        cards.xi = gameAlgorithm.calculate_xi(ti_wei_pao_result.type, ti_wei_pao_result.opCard);
+                        playerInfo.xi += cards.xi;
+                        break;
+                    }
+                }
+            } else {
+                let xi = gameAlgorithm.calculate_xi(ti_wei_pao_result.type, ti_wei_pao_result.opCard);
+                playerInfo.cardsAlreadyUsed.push({
+                    type: ti_wei_pao_result.type,
+                    cards: ti_wei_pao_result.cards,
+                    xi: xi,
+                })
+                playerInfo.xi += xi;
+            }
+        };
 
         socket.on('login', (data) => {
             console.log("a user trys to login  ", data);
@@ -473,8 +508,21 @@ exports.start = function(conf, mgr){
                         let result = gameAlgorithm.check_ti_wei_pao(next_instruction.seat_id, roomInfo.players, dealed_card);
 
                         if (result.status === true) {
-                            priority[result.op_seat_id] = 0;
-                            roomManager.init_new_session(roomInfo.current_status, priority, 1, dealed_card, next_instruction.seat_id);
+                            process_dealed_card_ti_wei_pao(roomInfo.players[result.op_seat_id], result);
+                            broadcast_information('dealed_card', {
+                                errcode: 0,
+                                dealed_card: dealed_card,
+                                op_seat_id: next_instruction.seat_id,
+                                ti_wei_pao_result: result,
+                                xi: roomInfo.players[result.op_seat_id].xi,
+                            }, roomInfo.players);
+                            setTimeout(() => {
+                                roomInfo.next_instruction.seat_id = result.op_seat_id;
+                                roomInfo.next_instruction.type = 0; // need shoot
+                                process_to_next_instruction(roomInfo, roomManager);
+                            }, action_delay);
+                            // priority[result.op_seat_id] = 0;
+                            // roomManager.init_new_session(roomInfo.current_status, priority, 1, dealed_card, next_instruction.seat_id);
                         } else {
                             priority[next_instruction.seat_id] = 0;
                             priority[(next_instruction.seat_id + 1) % 3] = 1;
@@ -482,14 +530,14 @@ exports.start = function(conf, mgr){
                             for (let i = 0; i < 3; ++i) {
                                 set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, dealed_card)
                             }
+                            broadcast_information('dealed_card', {
+                                errcode: 0,
+                                dealed_card: dealed_card,
+                                op_seat_id: next_instruction.seat_id,
+                                ti_wei_pao_result: result,
+                                sessionKey: roomInfo.current_status.session_key,
+                            }, roomInfo.players);
                         }
-                        broadcast_information('dealed_card', {
-                            errcode: 0,
-                            dealed_card: dealed_card,
-                            op_seat_id: next_instruction.seat_id,
-                            ti_wei_pao_result: result,
-                            sessionKey: roomInfo.current_status.session_key,
-                        }, roomInfo.players);
                     }
                 }
 
@@ -629,6 +677,7 @@ exports.start = function(conf, mgr){
                 return;
             }
 
+            clearTimer(socket.playerInfo);
             let roomInfo = roomManager.get_room_info(socket.room_id);
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
 
@@ -745,6 +794,7 @@ exports.start = function(conf, mgr){
             if (!userId || !gameAlgorithm.check_card_valid(data.opCard)) {
                 return;
             }
+            clearTimer(socket.playerInfo);
             if (gameAlgorithm.checkPeng(data.opCard, socket.playerInfo.cardsOnHand)) {
                 let roomInfo = roomManager.get_room_info(socket.room_id);
                 let other_player = roomManager.get_other_players(socket.username, socket.room_id);
@@ -771,6 +821,7 @@ exports.start = function(conf, mgr){
             }
 
             // TODO: check chi valid
+            clearTimer(socket.playerInfo);
             let roomInfo = roomManager.get_room_info(socket.room_id);
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
             if (roomInfo.current_status.numOfRequiredResponse === 0) {
@@ -796,11 +847,7 @@ exports.start = function(conf, mgr){
                 return;
             }
 
-            if (socket.playerInfo.operationTimer !== null) {
-                console.log("clear time out", socket.playerInfo.operationTimer);
-                clearTimeout(socket.playerInfo.operationTimer);
-                socket.playerInfo.operationTimer = null;
-            }
+            clearTimer(socket.playerInfo);
             let roomInfo = roomManager.get_room_info(socket.room_id);
             if (roomInfo.current_status.dealed_seat_id !== -1 && data.isDoneByUser === true) {
                 socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.op_card);
@@ -836,10 +883,7 @@ exports.start = function(conf, mgr){
             }
 
             socket.playerInfo.cardsOnHand.set(data.opCard, socket.playerInfo.cardsOnHand.get(data.opCard) - 1);
-            if (socket.playerInfo.operationTimer !== null) {
-                clearTimeout(socket.playerInfo.operationTimer);
-                socket.playerInfo.operationTimer = null;
-            }
+            clearTimer(socket.playerInfo);
             socket.playerInfo.cardsChooseToNotUsed.push(data.opCard);
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
