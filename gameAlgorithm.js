@@ -627,7 +627,7 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
 }
 
 exports.check_ti_wei_pao = (op_seat_id, players, dealed_card) => {
-    console.log("check_ti_wei_pao  ", players);
+    // console.log("check_ti_wei_pao  ", players);
     for (let i = 0; i < 3; ++i) {
         let res = false, from_wei_or_peng = 0;
         let type = '';
