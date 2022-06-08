@@ -438,7 +438,8 @@ exports.start = function(conf, mgr){
             mysocket.emit('self_action_result', data);
         };
 
-        let chiCheckout = (chiResult, other_player, mysocket) => {
+        let chiCheckout = (chiResult, other_player, mysocket, dealed_card) => {
+            mysocket.playerInfo.cardsOnHand.set(dealed_card, mysocket.playerInfo.cardsOnHand.get(dealed_card) + 1);
             for (let cards of chiResult.manyCards) {
                 let xi = gameAlgorithm.calculate_xi('chi', cards);
                 mysocket.playerInfo.xi += xi;
@@ -527,9 +528,9 @@ exports.start = function(conf, mgr){
                             priority[next_instruction.seat_id] = 0;
                             priority[(next_instruction.seat_id + 1) % 3] = 1;
                             roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, next_instruction.seat_id);
-                            for (let i = 0; i < 3; ++i) {
-                                set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, dealed_card)
-                            }
+                            // for (let i = 0; i < 3; ++i) {
+                            //     set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, dealed_card)
+                            // }
                             broadcast_information('dealed_card', {
                                 errcode: 0,
                                 dealed_card: dealed_card,
@@ -586,6 +587,7 @@ exports.start = function(conf, mgr){
                     roomInfo.current_status.respondedUser[highestPriorityPlayerId].data,
                     other_player,
                     userSocketMap.get(roomInfo.players[highestPriorityPlayerId].username),
+                    roomInfo.current_status.op_card,
                 )
                 roomInfo.next_instruction.seat_id = roomInfo.players[highestPriorityPlayerId].seat_id;
                 roomInfo.next_instruction.type = 0; // need shoot
@@ -891,11 +893,11 @@ exports.start = function(conf, mgr){
             let priority = [0, 0, 0];
             priority[socket.seat_id] = 2;
             roomManager.init_new_session(roomInfo.current_status, priority, 2, data.opCard, socket.playerInfo.seat_id);
-            for (let i = 0; i < 3; ++i) {
-                if (i !== socket.seat_id) {
-                    set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, data.opCard)
-                }
-            }
+            // for (let i = 0; i < 3; ++i) {
+            //     if (i !== socket.seat_id) {
+            //         set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, data.opCard)
+            //     }
+            // }
             broadcast_information('other_player_shoot', {
                 errcode: 0,
                 op_seat_id: socket.playerInfo.seat_id,
