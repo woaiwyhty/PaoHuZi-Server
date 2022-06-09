@@ -11,7 +11,7 @@ const roomManager = require('./room');
 const gameAlgorithm = require('./gameAlgorithm');
 const playerActionHandler = require('./playerActionHandler');
 
-const {get_room_info} = require("./room");
+const {get_room_info, leave_room} = require("./room");
 const action_delay = 2500;
 const operation_max_time = 1000;
 
@@ -316,13 +316,9 @@ exports.start = function(conf, mgr){
                         relogin: true,
                         seat_id: oldSocket.seat_id,
                     }, other_player);
-                    console.log("broadcast_information for reconnection done", login_result_data)
                     socket.emit('login_result', login_result_data);
-
-                    console.log("socket emit for reconnection done")
-
-                    return;
                 }
+                return;
             }
 
             let join_result = roomManager.join_room(data.username, data.room_id, socket.handshake.address, nickname);
@@ -425,6 +421,12 @@ exports.start = function(conf, mgr){
                     }, 5000)
                 } else {
                     roomInfo.game_state = 2;
+                    for (let i = 0; i < 3; ++i) {
+                        if (roomInfo.players[i].online !== true) {
+                            userSocketMap.delete(roomInfo.players[i].username);
+                            roomManager.leave_room(roomInfo.players[i].username, roomInfo.room_id);
+                        }
+                    }
                 }
             }
         };
@@ -524,6 +526,12 @@ exports.start = function(conf, mgr){
                                 }, 5000)
                             } else {
                                 roomInfo.game_state = 2;
+                                for (let i = 0; i < 3; ++i) {
+                                    if (roomInfo.players[i].online !== true) {
+                                        userSocketMap.delete(roomInfo.players[i].username);
+                                        roomManager.leave_room(roomInfo.players[i].username, roomInfo.room_id);
+                                    }
+                                }
                             }
                         }
 

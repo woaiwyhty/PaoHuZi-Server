@@ -104,6 +104,10 @@ exports.check_rejoin = (username, room_id) => {
     return user_room_map.has(username) && user_room_map.get(username) === room_id && exports.get_room_info(room_id).game_state === 1;
 }
 
+exports.check_room_end = (room_id) => {
+    return exports.get_room_info(room_id).game_state !== 2;
+}
+
 exports.check_room_full = (room_id) => {
     return exports.details.get(room_id).num_of_players >= 3;
 };
