@@ -41,5 +41,9 @@ if (cluster.isMaster) {
         cluster.fork();
     });
 } else {
-    socket_service.start(hall_server_config);
+    try {
+        socket_service.start(hall_server_config);
+    } catch (e) {
+        console.log(e);
+    }
 }

@@ -71,7 +71,7 @@ exports.create_room = (username, rounds) => {
         number_of_wang: 0,
         cancel_room_deadline_if_not_start: 180,
         current_on_turn_player_id: 0,
-        in_game: false,
+        game_state: 0, // 0: not start, 1: in_game, 2: room completed
     });
 
     exports.current_num_of_rooms += 1;
@@ -101,7 +101,7 @@ exports.check_user_in_room = (username) => {
 };
 
 exports.check_rejoin = (username, room_id) => {
-    return user_room_map.has(username) && user_room_map.get(username) === room_id;
+    return user_room_map.has(username) && user_room_map.get(username) === room_id && exports.get_room_info(room_id).game_state === 1;
 }
 
 exports.check_room_full = (room_id) => {
@@ -228,3 +228,23 @@ exports.selectHighestPriorityWithoutGuo = (current_status) => {
 };
 
 
+exports.filterImportantProperties = (players) => {
+    let result = [];
+    for (let player of players) {
+        result.push({
+            username: player.username,
+            nickname: player.nickname,
+            cardsDiscarded: player.cardsDiscarded,
+            cardsAlreadyUsed: player.cardsAlreadyUsed,
+            cardsChooseToNotUsed: player.cardsChooseToNotUsed,
+            ti_pao_counter: player.ti_pao_counter,
+            xi: player.xi,
+            seat_id: player.seat_id,
+            ip: player.ip,
+            score: player.score,
+            online: player.online,
+            ready: player.ready,
+        });
+    }
+    return result;
+};

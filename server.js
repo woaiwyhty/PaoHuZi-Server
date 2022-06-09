@@ -13,7 +13,7 @@ const playerActionHandler = require('./playerActionHandler');
 
 const {get_room_info} = require("./room");
 const action_delay = 2500;
-const operation_max_time = 30000;
+const operation_max_time = 1000;
 
 app.all('*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -245,7 +245,11 @@ exports.start = function(conf, mgr){
                     cards: ti_wei_pao_result.cards,
                     xi: xi,
                 })
+                playerInfo.cardsOnHand.set(ti_wei_pao_result.opCard, 0);
                 playerInfo.xi += xi;
+            }
+            if (['ti', 'pao'].indexOf(ti_wei_pao_result.type) >= 0) {
+                playerInfo.ti_pao_counter++;
             }
         };
 
@@ -281,7 +285,7 @@ exports.start = function(conf, mgr){
                 let oldSocket = userSocketMap.get(data.username);
                 let oldRoomId = oldSocket.room_id;
                 let roomInfo = roomManager.get_room_info(oldRoomId);
-                if (roomInfo !== null && roomInfo.in_game === true &&
+                if (roomInfo !== null && roomInfo.game_state === 1 &&
                     data.room_id === oldRoomId) {
                     // relogin
                     socket.score = oldSocket.score;
@@ -297,7 +301,7 @@ exports.start = function(conf, mgr){
                         errmsg: "ok",
                         room_id: data.room_id,
                         seat_id: oldSocket.seat_id,
-                        playersInfo: roomInfo.players,
+                        playersInfo: roomManager.filterImportantProperties(roomInfo.players),
                         numberOfHoleCards:
                             roomInfo.current_hole_cards.length - roomInfo.current_hole_cards_cursor,
                         cardsOnHand: Array.from(socket.playerInfo.cardsOnHand),
@@ -387,7 +391,12 @@ exports.start = function(conf, mgr){
                 }
             }
             let afterScore = [roomInfo.players[0].score, roomInfo.players[1].score, roomInfo.players[2].score];
-
+            let all_online = true;
+            for (let i = 0; i < 3; ++i) {
+                if (roomInfo.players[i].online !== true) {
+                    all_online = false;
+                }
+            }
             const data = {
                 errcode: 0,
                 op_seat_id: mysocket.playerInfo.seat_id,
@@ -401,18 +410,22 @@ exports.start = function(conf, mgr){
                 nicknames: [roomInfo.players[0].nickname, roomInfo.players[1].nickname, roomInfo.players[2].nickname],
                 huInfo: huResult.huInfo,
                 holeCards: holeCards,
-                lastGame: roomInfo.current_played_games === roomInfo.total_games,
+                lastGame: roomInfo.current_played_games === roomInfo.total_games || !all_online,
             };
             broadcast_information('other_player_hu', data, other_player);
             mysocket.emit('self_action_result', data);
-            roomInfo.in_game = false;
+            // roomInfo.in_game = false;
             if (roomInfo.current_played_games < roomInfo.total_games) {
-                let target = [roomInfo.players[roomInfo.last_join_seat_id]];
-                setTimeout(function() {
-                    broadcast_information('askGameReady', {
-                        errcode: 0,
-                    }, target);
-                }, 5000)
+                if (all_online) {
+                    let target = [roomInfo.players[roomInfo.last_join_seat_id]];
+                    setTimeout(function() {
+                        broadcast_information('askGameReady', {
+                            errcode: 0,
+                        }, target);
+                    }, 5000)
+                } else {
+                    roomInfo.game_state = 2;
+                }
             }
         };
 
@@ -480,6 +493,12 @@ exports.start = function(conf, mgr){
                 } else if (next_instruction.type === 1) {
                     if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
                         let afterScore = [roomInfo.players[0].score, roomInfo.players[1].score, roomInfo.players[2].score];
+                        let all_online = true;
+                        for (let i = 0; i < 3; ++i) {
+                            if (roomInfo.players[i].online !== true) {
+                                all_online = false;
+                            }
+                        }
                         // wang hu
                         broadcast_information('wang_hu', {
                             errcode: 0,
@@ -490,18 +509,22 @@ exports.start = function(conf, mgr){
                             cardsGroups: [],
                             holeCards: [],
                             afterScore: afterScore,
-                            lastGame: roomInfo.current_played_games === roomInfo.total_games,
+                            lastGame: roomInfo.current_played_games === roomInfo.total_games || !all_online,
                             nicknames: [roomInfo.players[0].nickname, roomInfo.players[1].nickname, roomInfo.players[2].nickname],
                         }, roomInfo.players);
                         roomInfo.number_of_wang += 1;
-                        roomInfo.in_game = false;
+                        // roomInfo.in_game = false;
                         if (roomInfo.current_played_games < roomInfo.total_games) {
-                            let target = [roomInfo.players[roomInfo.last_join_seat_id]];
-                            setTimeout(function() {
-                                broadcast_information('askGameReady', {
-                                    errcode: 0,
-                                }, target);
-                            }, 5000)
+                            if (all_online) {
+                                let target = [roomInfo.players[roomInfo.last_join_seat_id]];
+                                setTimeout(function() {
+                                    broadcast_information('askGameReady', {
+                                        errcode: 0,
+                                    }, target);
+                                }, 5000)
+                            } else {
+                                roomInfo.game_state = 2;
+                            }
                         }
 
                     } else {
@@ -518,8 +541,14 @@ exports.start = function(conf, mgr){
                                 xi: roomInfo.players[result.op_seat_id].xi,
                             }, roomInfo.players);
                             setTimeout(() => {
-                                roomInfo.next_instruction.seat_id = result.op_seat_id;
-                                roomInfo.next_instruction.type = 0; // need shoot
+                                if ((roomInfo.players[result.op_seat_id].ti_pao_counter === 1 &&
+                                    result.type !== 'wei') || (result.type === 'wei')) {
+                                    roomInfo.next_instruction.seat_id = result.op_seat_id;
+                                    roomInfo.next_instruction.type = 0; // need shoot
+                                } else {
+                                    roomInfo.next_instruction.seat_id = (result.op_seat_id + 1) % 3;
+                                    roomInfo.next_instruction.type = 1; // deal a card
+                                }
                                 process_to_next_instruction(roomInfo, roomManager);
                             }, action_delay);
                             // priority[result.op_seat_id] = 0;
@@ -528,9 +557,9 @@ exports.start = function(conf, mgr){
                             priority[next_instruction.seat_id] = 0;
                             priority[(next_instruction.seat_id + 1) % 3] = 1;
                             roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, next_instruction.seat_id);
-                            // for (let i = 0; i < 3; ++i) {
-                            //     set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, dealed_card)
-                            // }
+                            for (let i = 0; i < 3; ++i) {
+                                set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, dealed_card)
+                            }
                             broadcast_information('dealed_card', {
                                 errcode: 0,
                                 dealed_card: dealed_card,
@@ -890,21 +919,96 @@ exports.start = function(conf, mgr){
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
-            let priority = [0, 0, 0];
-            priority[socket.seat_id] = 2;
-            roomManager.init_new_session(roomInfo.current_status, priority, 2, data.opCard, socket.playerInfo.seat_id);
-            // for (let i = 0; i < 3; ++i) {
-            //     if (i !== socket.seat_id) {
-            //         set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, data.opCard)
-            //     }
-            // }
-            broadcast_information('other_player_shoot', {
-                errcode: 0,
-                op_seat_id: socket.playerInfo.seat_id,
-                type: data.type,
-                opCard: data.opCard,
-                sessionKey: roomInfo.current_status.session_key,
-            }, other_player);
+            let pao_result = null;
+            for (let player of other_player) {
+                for (let usedCards of player.cardsAlreadyUsed) {
+                    if (usedCards.type === 'wei' && usedCards.cards[2] === data.opCard) {
+                        usedCards.type = "pao";
+                        usedCards.cards = [data.opCard, data.opCard, data.opCard, data.opCard];
+                        player.xi -= usedCards.xi;
+                        usedCards.xi = gameAlgorithm.calculate_xi("pao", data.opCard);
+                        player.xi += usedCards.xi;
+                        player.ti_pao_counter++;
+                        pao_result = {
+                            op_seat_id: player.seat_id,
+                            opCard: data.opCard,
+                            type: 'pao',
+                            cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                            from_wei: 1,
+                            xi: usedCards.xi,
+                        }
+                        break;
+                    }
+                }
+                if (player.cardsOnHand.get(data.opCard) === 3) {
+                    let xi = gameAlgorithm.calculate_xi('pao', data.opCard);
+                    player.cardsOnHand.set(data.opCard, 0);
+                    player.cardsAlreadyUsed.push({
+                        type: 'pao',
+                        cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                        xi: xi,
+                    })
+                    player.xi += xi;
+                    player.ti_pao_counter++;
+                    pao_result = {
+                        op_seat_id: player.seat_id,
+                        opCard: data.opCard,
+                        type: 'pao',
+                        cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                        from_wei: 0,
+                        xi: xi,
+                    }
+                    break;
+                }
+            }
+
+            if (pao_result === null) {
+                let priority = [0, 0, 0];
+                priority[socket.seat_id] = 2;
+                roomManager.init_new_session(roomInfo.current_status, priority, 2, data.opCard, socket.playerInfo.seat_id);
+                for (let i = 0; i < 3; ++i) {
+                    if (i !== socket.seat_id) {
+                        set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, data.opCard)
+                    }
+                }
+                broadcast_information('other_player_shoot', {
+                    errcode: 0,
+                    op_seat_id: socket.playerInfo.seat_id,
+                    type: data.type,
+                    opCard: data.opCard,
+                    sessionKey: roomInfo.current_status.session_key,
+                }, other_player);
+            } else {
+                broadcast_information('other_player_shoot', {
+                    errcode: 0,
+                    op_seat_id: socket.playerInfo.seat_id,
+                    type: data.type,
+                    opCard: data.opCard,
+                    paoResult: pao_result,
+                }, other_player);
+
+                socket.emit("other_player_action", {
+                    errcode: 0,
+                    op_seat_id: pao_result.op_seat_id,
+                    type: 'pao',
+                    cards: [data.opCard, data.opCard, data.opCard, data.opCard],
+                    opCard: data.opCard,
+                    from_wei_or_peng: pao_result.from_wei,
+                    xi: roomInfo.players[pao_result.op_seat_id].xi,
+                });
+
+                setTimeout(() => {
+                    if (roomInfo.players[pao_result.op_seat_id].ti_pao_counter === 1) {
+                        roomInfo.next_instruction.seat_id = pao_result.op_seat_id;
+                        roomInfo.next_instruction.type = 0; // need shoot
+                    } else {
+                        roomInfo.next_instruction.seat_id = (pao_result.op_seat_id + 1) % 3;
+                        roomInfo.next_instruction.type = 1; // deal a card
+                    }
+                    process_to_next_instruction(roomInfo, roomManager);
+                }, action_delay);
+            }
+
             roomInfo.at_the_beginning = false;
         };
         socket.on('shootCard', (data) => {
@@ -956,7 +1060,7 @@ exports.start = function(conf, mgr){
             };
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
 
-            if (roomInfo.in_game) {
+            if (roomInfo.game_state === 1) {
                 broadcast_data.completely_left = false;
                 roomInfo.players[socket.seat_id].online = false;
                 let cnt = 0;
