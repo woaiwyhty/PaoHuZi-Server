@@ -13,7 +13,7 @@ const playerActionHandler = require('./playerActionHandler');
 
 const {get_room_info, leave_room} = require("./room");
 const action_delay = 2500;
-const operation_max_time = 1000;
+const operation_max_time = 30000;
 
 app.all('*', function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -172,15 +172,23 @@ exports.start = function(conf, mgr){
         };
 
         let clearTimer = (playerInfo) => {
+            playerInfo.operation = null;
             if (playerInfo.operationTimer !== null) {
                 clearTimeout(playerInfo.operationTimer);
                 playerInfo.operationTimer = null;
             }
         }
 
-        let set_guo_timer = (playerInfo, sessionKey, op_card) => {
+        let set_guo_timer = (playerInfo, sessionKey, op_card, isDealed, op_seat_id) => {
             console.log("set_guo_timer  for  ", playerInfo.username)
-
+            playerInfo.operation = {
+                type: 'operation',
+                sessionKey: sessionKey,
+                op_seat_id: op_seat_id,
+                opCard: op_card,
+                isDealed: isDealed,
+                startTime: Date.now(),
+            }
             playerInfo.operationTimer = setTimeout(()=> {
                 if (playerInfo.operationTimer === null) {
                     return;
@@ -200,7 +208,13 @@ exports.start = function(conf, mgr){
             }, operation_max_time);
         };
 
-        let set_shoot_card_timer = (playerInfo) => {
+        let set_shoot_card_timer = (playerInfo, is_last_card_dealed) => {
+            playerInfo.operation = {
+                type: 'shoot',
+                opCard: '',
+                startTime: Date.now(),
+                is_last_card_dealed: is_last_card_dealed,
+            };
             console.log("set_shoot_card_timer  for  ", playerInfo)
             playerInfo.operationTimer = setTimeout(()=> {
                 let card = playerActionHandler.determineCardForShoot(playerInfo);
@@ -491,7 +505,7 @@ exports.start = function(conf, mgr){
                         errcode: 0,
                         op_seat_id: next_instruction.seat_id
                     }, roomInfo.players);
-                    set_shoot_card_timer(target_player);
+                    set_shoot_card_timer(target_player, roomInfo.is_last_card_dealed);
                 } else if (next_instruction.type === 1) {
                     if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
                         let afterScore = [roomInfo.players[0].score, roomInfo.players[1].score, roomInfo.players[2].score];
@@ -536,6 +550,7 @@ exports.start = function(conf, mgr){
                         }
 
                     } else {
+                        roomInfo.is_last_card_dealed = 1;
                         let dealed_card = roomInfo.current_hole_cards[roomInfo.current_hole_cards_cursor++];
                         let result = gameAlgorithm.check_ti_wei_pao(next_instruction.seat_id, roomInfo.players, dealed_card);
 
@@ -566,7 +581,8 @@ exports.start = function(conf, mgr){
                             priority[(next_instruction.seat_id + 1) % 3] = 1;
                             roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, next_instruction.seat_id);
                             for (let i = 0; i < 3; ++i) {
-                                set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, dealed_card)
+                                set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key,
+                                    dealed_card, true, next_instruction.seat_id)
                             }
                             broadcast_information('dealed_card', {
                                 errcode: 0,
@@ -926,6 +942,7 @@ exports.start = function(conf, mgr){
             socket.playerInfo.cardsChooseToNotUsed.push(data.opCard);
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
+            roomInfo.is_last_card_dealed = 2;
             let other_player = roomManager.get_other_players(socket.username, socket.room_id);
             let pao_result = null;
             for (let player of other_player) {
@@ -976,7 +993,8 @@ exports.start = function(conf, mgr){
                 roomManager.init_new_session(roomInfo.current_status, priority, 2, data.opCard, socket.playerInfo.seat_id);
                 for (let i = 0; i < 3; ++i) {
                     if (i !== socket.seat_id) {
-                        set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key, data.opCard)
+                        set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key,
+                            data.opCard, false, socket.playerInfo.seat_id);
                     }
                 }
                 broadcast_information('other_player_shoot', {

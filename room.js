@@ -71,6 +71,7 @@ exports.create_room = (username, rounds) => {
         number_of_wang: 0,
         cancel_room_deadline_if_not_start: 180,
         current_on_turn_player_id: 0,
+        is_last_card_dealed: 0, // 0: unknown, 1: deal, 2: shoot
         game_state: 0, // 0: not start, 1: in_game, 2: room completed
     });
 
@@ -158,6 +159,7 @@ exports.join_room = (username, room_id, ip=null, nickname="") => {
         score: 0,
         online: true,
         ready: true,
+        opeartion: null,
         operationTimer: null,
     };
     exports.details.get(room_id).num_of_players += 1;
@@ -248,6 +250,7 @@ exports.filterImportantProperties = (players) => {
             score: player.score,
             online: player.online,
             ready: player.ready,
+            operation: player.operation,
         });
     }
     return result;
