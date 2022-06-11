@@ -964,7 +964,7 @@ exports.start = function(conf, mgr){
                             type: 'pao',
                             cards: [data.opCard, data.opCard, data.opCard, data.opCard],
                             from_wei: 1,
-                            xi: usedCards.xi,
+                            xi: player.xi,
                         }
                         break;
                     }
@@ -985,7 +985,7 @@ exports.start = function(conf, mgr){
                         type: 'pao',
                         cards: [data.opCard, data.opCard, data.opCard, data.opCard],
                         from_wei: 0,
-                        xi: xi,
+                        xi: player.xi,
                     }
                     break;
                 }
