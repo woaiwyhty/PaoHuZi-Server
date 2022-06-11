@@ -740,7 +740,7 @@ exports.start = function(conf, mgr){
 
             // TODO: validate the hu result on server side
             if (roomInfo.current_status.numOfRequiredResponse === 0) {
-                huCheckout(data, other_player, socket);
+                huCheckout(data, other_player, socket, roomInfo);
             } else {
                 roomInfo.current_status.respondedNums += 1;
                 roomInfo.current_status.respondedUser[data.seat_id] = {
