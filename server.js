@@ -498,6 +498,9 @@ exports.start = function(conf, mgr){
         let process_to_next_instruction = (roomInfo, roomManager) => {
             roomManager.clear_session(roomInfo.current_status);
             setTimeout(() => {
+                if (roomInfo.game_state === 2) {
+                    return;
+                }
                 let next_instruction = roomInfo.next_instruction;
                 let priority = [2, 2, 2];
                 // console.log("process_to_next_instruction  ", roomInfo.next_instruction, roomInfo.current_status);
@@ -566,6 +569,9 @@ exports.start = function(conf, mgr){
                                 xi: roomInfo.players[result.op_seat_id].xi,
                             }, roomInfo.players);
                             setTimeout(() => {
+                                if (roomInfo.game_state === 2) {
+                                    return;
+                                }
                                 if ((roomInfo.players[result.op_seat_id].ti_pao_counter === 1 &&
                                     result.type !== 'wei') || (result.type === 'wei')) {
                                     roomInfo.next_instruction.seat_id = result.op_seat_id;
@@ -715,6 +721,9 @@ exports.start = function(conf, mgr){
             let roomInfo = roomManager.get_room_info(socket.room_id);
             if (!roomInfo.at_the_beginning) {
                 setTimeout(() => {
+                    if (roomInfo.game_state === 2) {
+                        return;
+                    }
                     if (socket.playerInfo.ti_pao_counter === 1) {
                         roomInfo.next_instruction.seat_id = socket.seat_id;
                         roomInfo.next_instruction.type = 0; // need shoot
@@ -798,6 +807,9 @@ exports.start = function(conf, mgr){
 
             let roomInfo = roomManager.get_room_info(socket.room_id);
             setTimeout(() => {
+                if (roomInfo.game_state === 2) {
+                    return;
+                }
                 if (socket.playerInfo.ti_pao_counter === 1) {
                     roomInfo.next_instruction.seat_id = socket.seat_id;
                     roomInfo.next_instruction.type = 0; // need shoot
@@ -838,6 +850,9 @@ exports.start = function(conf, mgr){
 
                 let roomInfo = roomManager.get_room_info(socket.room_id);
                 setTimeout(() => {
+                    if (roomInfo.game_state === 2) {
+                        return;
+                    }
                     roomInfo.next_instruction.seat_id = socket.seat_id;
                     roomInfo.next_instruction.type = 0; // need shoot
                     process_to_next_instruction(roomInfo, roomManager);
@@ -1026,6 +1041,9 @@ exports.start = function(conf, mgr){
                 });
 
                 setTimeout(() => {
+                    if (roomInfo.game_state === 2) {
+                        return;
+                    }
                     if (roomInfo.players[pao_result.op_seat_id].ti_pao_counter === 1) {
                         roomInfo.next_instruction.seat_id = pao_result.op_seat_id;
                         roomInfo.next_instruction.type = 0; // need shoot

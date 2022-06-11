@@ -195,6 +195,7 @@ exports.leave_room = (username, room_id) => {
     info.num_of_players -= 1;
     if (info.num_of_players === 0) {
         exports.delete_room(room_id);
+        info.game_state = 2;
         console.log("info is  ", info);
     }
 };
