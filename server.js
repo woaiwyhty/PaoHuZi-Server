@@ -425,6 +425,7 @@ exports.start = function(conf, mgr){
             broadcast_information('other_player_hu', data, other_player);
             mysocket.emit('self_action_result', data);
             // roomInfo.in_game = false;
+            roomInfo.number_of_wang = 0;
             if (roomInfo.current_played_games < roomInfo.total_games) {
                 if (all_online) {
                     let target = [roomInfo.players[roomInfo.last_join_seat_id]];
@@ -1104,6 +1105,7 @@ exports.start = function(conf, mgr){
                     }
                 }
             } else {
+                clearTimer(socket.playerInfo);
                 roomManager.leave_room(socket.username, socket.room_id);
                 userSocketMap.delete(userId);
             }
