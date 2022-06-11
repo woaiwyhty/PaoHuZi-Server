@@ -486,6 +486,7 @@ exports.start = function(conf, mgr){
                 errcode: 0,
                 op_seat_id: mysocket.playerInfo.seat_id,
                 type: 'chi',
+                opCard: dealed_card,
                 manyCards: chiResult.manyCards,
                 xi: mysocket.playerInfo.xi,
             };
