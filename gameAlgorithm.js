@@ -67,8 +67,9 @@ let assign_cards_when_game_start = (roomInfo) => {
     //     if (i > 10) {
     //         key = 'd' + (i - 10).toString();
     //     }
+    //     roomInfo.players[0].cardsOnHand.set(key, 0);
     //     roomInfo.players[1].cardsOnHand.set(key, 0);
-    //     // roomInfo.players[2].cardsOnHand.set(key, 0);
+    //     roomInfo.players[2].cardsOnHand.set(key, 0);
     //
     // }
     // roomInfo.players[0].cardsOnHand.set('d5', 4);

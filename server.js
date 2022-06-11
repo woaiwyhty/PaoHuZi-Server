@@ -373,18 +373,27 @@ exports.start = function(conf, mgr){
                 gameAlgorithm.init_game(socket.room_id)
                 // console.log(socket.playerInfo);
                 let roomInfo = roomManager.get_room_info(socket.room_id);
-                let tianhuResult = gameAlgorithm.checkHu([], roomInfo.players[0].cardsOnHand, null);
+                // let tianhuResult = gameAlgorithm.checkHu([], roomInfo.players[0].cardsOnHand, null);
+                let priority = [0, 1, 2];
+                // TODO: check TI on server end
+                roomManager.init_new_session(roomInfo.current_status, priority, 3);
+
                 for (let player of roomInfo.players) {
                     let data_to_sent = {
                         errcode: 0,
                         number_of_wang: roomInfo.number_of_wang,
                         current_played_games: roomInfo.current_played_games,
                         total_games: roomInfo.total_games,
-                        tianHuResult: tianhuResult,
                         cardsOnHand: Array.from(player.cardsOnHand),
+                        card21st: roomInfo.current_hole_cards[60],
+                        sessionKey: roomInfo.current_status.session_key,
                     };
+                    set_guo_timer(player, roomInfo.current_status.session_key,
+                        '', true, player.seat_id);
                     userSocketMap.get(player.username).emit('game_start', data_to_sent);
                 }
+
+
                 roomInfo.at_the_beginning = true;
             }
         });
@@ -655,28 +664,6 @@ exports.start = function(conf, mgr){
                 process_to_next_instruction(roomInfo, roomManager);
             }
         };
-
-        socket.on('tianhu_result', (data) => {
-            data = JSON.parse(data);
-            let userId = socket.username;
-            if (!userId) {
-                return;
-            }
-            let other_player = roomManager.get_other_players(socket.username, socket.room_id);
-            let roomInfo = roomManager.get_room_info(socket.room_id);
-
-            if (data.status === true) {
-                // checkout
-                huCheckout(data, other_player, socket, roomInfo);
-            } else {
-                roomManager.init_new_session(roomInfo.current_status, [2, 0, 1], 2);
-                broadcast_information('check_dihu', {
-                    errcode: 0,
-                    card21st: roomInfo.players[0].card21st,
-                    sessionKey: roomInfo.current_status.session_key,
-                }, other_player);
-            }
-        });
 
         socket.on('ti', (data) => {
             data = JSON.parse(data);
