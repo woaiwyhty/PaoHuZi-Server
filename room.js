@@ -93,6 +93,10 @@ exports.init_new_session = (current_status, priority, numOfRequiredResponse, op_
     current_status.dealed_seat_id = dealed_seat_id; // will be set when the card is dealed.
 };
 
+exports.clear_session = (current_status) => {
+    current_status.numOfRequiredResponse = 0;
+}
+
 exports.check_room_exists = (room_id) => {
     return exports.details.has(room_id);
 };

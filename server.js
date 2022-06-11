@@ -495,6 +495,7 @@ exports.start = function(conf, mgr){
         };
 
         let process_to_next_instruction = (roomInfo, roomManager) => {
+            roomManager.clear_session(roomInfo.current_status);
             setTimeout(() => {
                 let next_instruction = roomInfo.next_instruction;
                 let priority = [2, 2, 2];
