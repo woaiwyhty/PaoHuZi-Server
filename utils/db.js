@@ -27,6 +27,7 @@ mongo_server.connect(url, (err, db) => {
 
     console.log("Connected to Mongodb.");
     exports.mongo_db = dbo;
+    exports.mongo_client = db;
     exports.account_collection = dbo.collection("Accounts");
 });
 
