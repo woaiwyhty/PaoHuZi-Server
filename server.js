@@ -909,7 +909,7 @@ exports.start = function(conf, mgr){
                 socket.playerInfo.cardsChooseToNotUsed.push(roomInfo.current_status.op_card);
             }
             if (roomInfo.current_status.numOfRequiredResponse === 0) {
-                process_to_next_instruction(roomInfo);
+                process_to_next_instruction(roomInfo, roomManager);
             } else {
                 if (roomInfo.current_status.respondedUser[socket.seat_id] !== null) {
                     return;
