@@ -306,7 +306,7 @@ exports.start = function(conf, mgr){
 
         let process_dealed_card_ti_wei_pao = (playerInfo, ti_wei_pao_result) => {
             if (ti_wei_pao_result.from_wei_or_peng) {
-                console.log("process_dealed_card_ti_wei_pao before ", playerInfo.seat_id, playerInfo.cardsAlreadyUsed);
+                // console.log("process_dealed_card_ti_wei_pao before ", playerInfo.seat_id, playerInfo.cardsAlreadyUsed);
                 for (let cards of playerInfo.cardsAlreadyUsed) {
                     if (['wei', 'peng'].indexOf(cards.type) >= 0
                         && cards.cards[2] === ti_wei_pao_result.cards[ti_wei_pao_result.cards.length - 1]) {
@@ -323,7 +323,7 @@ exports.start = function(conf, mgr){
                         break;
                     }
                 }
-                console.log("process_dealed_card_ti_wei_pao after ", playerInfo.seat_id, playerInfo.cardsAlreadyUsed);
+                // console.log("process_dealed_card_ti_wei_pao after ", playerInfo.seat_id, playerInfo.cardsAlreadyUsed);
 
             } else {
                 let xi = gameAlgorithm.calculate_xi(ti_wei_pao_result.type, ti_wei_pao_result.opCard);
