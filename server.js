@@ -178,7 +178,7 @@ exports.start = function(conf, mgr){
             }
         }
 
-        let set_guo_timer = (playerInfo, sessionKey, op_card, isDealed, op_seat_id) => {
+        let set_guo_timer = (playerInfo, sessionKey, op_card, isDealed, op_seat_id, isCheckHu = false) => {
             console.log("set_guo_timer  for  ", playerInfo.username)
             playerInfo.operation = {
                 type: 'operation',
@@ -187,6 +187,7 @@ exports.start = function(conf, mgr){
                 opCard: op_card,
                 isDealed: isDealed,
                 startTime: Date.now(),
+                isCheckHu: isCheckHu, // only valid when dealing a card
             }
             playerInfo.operationTimer = setTimeout(()=> {
                 if (playerInfo.operationTimer === null) {
@@ -232,6 +233,75 @@ exports.start = function(conf, mgr){
                 }
             }, operation_max_time)
         }
+
+        let process_ti_wei_pao_to_client = (roomInfo, result, dealed_card, hasPrevCheckHu) => {
+            process_dealed_card_ti_wei_pao(roomInfo.players[result.op_seat_id], result);
+            broadcast_information('dealed_card', {
+                errcode: 0,
+                dealed_card: dealed_card,
+                op_seat_id: roomInfo.next_instruction.seat_id,
+                ti_wei_pao_result: result,
+                xi: roomInfo.players[result.op_seat_id].xi,
+                hasPrevCheckHu: hasPrevCheckHu,
+            }, roomInfo.players);
+            setTimeout(() => {
+                if (roomInfo.game_state === 2) {
+                    return;
+                }
+                if ((roomInfo.players[result.op_seat_id].ti_pao_counter === 1 &&
+                    result.type !== 'wei') || (result.type === 'wei')) {
+                    roomInfo.next_instruction.seat_id = result.op_seat_id;
+                    roomInfo.next_instruction.type = 0; // need shoot
+                } else {
+                    roomInfo.next_instruction.seat_id = (result.op_seat_id + 1) % 3;
+                    roomInfo.next_instruction.type = 1; // deal a card
+                }
+                process_to_next_instruction(roomInfo, roomManager);
+            }, action_delay);
+        };
+
+        let process_check_to_dealed_card = (roomInfo, dealed_card) => {
+            let result = gameAlgorithm.check_ti_wei_pao(roomInfo.next_instruction.seat_id, roomInfo.players, dealed_card);
+            if (result.status === true) {
+                process_ti_wei_pao_to_client(roomInfo, result, dealed_card, true);
+            } else {
+                let priority = [2, 2, 2];
+                priority[roomInfo.next_instruction.seat_id] = 0;
+                priority[(roomInfo.next_instruction.seat_id + 1) % 3] = 1;
+                roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, roomInfo.next_instruction.seat_id);
+                for (let i = 0; i < 3; ++i) {
+                    set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key,
+                        dealed_card, true, roomInfo.next_instruction.seat_id)
+                }
+                broadcast_information('dealed_card', {
+                    errcode: 0,
+                    dealed_card: dealed_card,
+                    op_seat_id: roomInfo.next_instruction.seat_id,
+                    ti_wei_pao_result: result,
+                    sessionKey: roomInfo.current_status.session_key,
+                    hasPrevCheckHu: true,
+                }, roomInfo.players);
+                roomInfo.next_instruction.type = 1;
+                roomInfo.next_instruction.seat_id = (roomInfo.next_instruction.seat_id + 1) % 3;
+            }
+        };
+
+        let process_check_hu_stage_when_dealed = (dealed_card, ti_wei_pao_result, roomInfo) => {
+            let priority = [2, 2, 2];
+            priority[roomInfo.next_instruction.seat_id] = 0;
+            priority[(roomInfo.next_instruction.seat_id + 1) % 3] = 1;
+            roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, roomInfo.next_instruction.seat_id, true);
+            broadcast_information('dealed_card_check_hu', {
+                errcode: 0,
+                dealed_card: dealed_card,
+                op_seat_id: roomInfo.next_instruction.seat_id,
+                sessionKey: roomInfo.current_status.session_key,
+            }, roomInfo.players);
+            for (let i = 0; i < 3; ++i) {
+                set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key,
+                    dealed_card, true, roomInfo.next_instruction.seat_id, true);
+            }
+        };
 
         let process_dealed_card_ti_wei_pao = (playerInfo, ti_wei_pao_result) => {
             if (ti_wei_pao_result.from_wei_or_peng) {
@@ -520,6 +590,8 @@ exports.start = function(conf, mgr){
                         op_seat_id: next_instruction.seat_id
                     }, roomInfo.players);
                     set_shoot_card_timer(target_player, roomInfo.is_last_card_dealed);
+                    next_instruction.type = 1;
+                    next_instruction.seat_id = (next_instruction.seat_id + 1) % 3;
                 } else if (next_instruction.type === 1) {
                     if (roomInfo.current_hole_cards_cursor === roomInfo.current_hole_cards.length) {
                         let afterScore = [roomInfo.players[0].score, roomInfo.players[1].score, roomInfo.players[2].score];
@@ -566,54 +638,17 @@ exports.start = function(conf, mgr){
                     } else {
                         roomInfo.is_last_card_dealed = 1;
                         let dealed_card = roomInfo.current_hole_cards[roomInfo.current_hole_cards_cursor++];
-                        let result = gameAlgorithm.check_ti_wei_pao(next_instruction.seat_id, roomInfo.players, dealed_card);
+                        let result = gameAlgorithm.check_ti_wei_when_dealed(next_instruction.seat_id, roomInfo.players, dealed_card);
 
                         if (result.status === true) {
-                            process_dealed_card_ti_wei_pao(roomInfo.players[result.op_seat_id], result);
-                            broadcast_information('dealed_card', {
-                                errcode: 0,
-                                dealed_card: dealed_card,
-                                op_seat_id: next_instruction.seat_id,
-                                ti_wei_pao_result: result,
-                                xi: roomInfo.players[result.op_seat_id].xi,
-                            }, roomInfo.players);
-                            setTimeout(() => {
-                                if (roomInfo.game_state === 2) {
-                                    return;
-                                }
-                                if ((roomInfo.players[result.op_seat_id].ti_pao_counter === 1 &&
-                                    result.type !== 'wei') || (result.type === 'wei')) {
-                                    roomInfo.next_instruction.seat_id = result.op_seat_id;
-                                    roomInfo.next_instruction.type = 0; // need shoot
-                                } else {
-                                    roomInfo.next_instruction.seat_id = (result.op_seat_id + 1) % 3;
-                                    roomInfo.next_instruction.type = 1; // deal a card
-                                }
-                                process_to_next_instruction(roomInfo, roomManager);
-                            }, action_delay);
-                            // priority[result.op_seat_id] = 0;
-                            // roomManager.init_new_session(roomInfo.current_status, priority, 1, dealed_card, next_instruction.seat_id);
+                            process_ti_wei_pao_to_client(roomInfo, result, dealed_card, false);
                         } else {
-                            priority[next_instruction.seat_id] = 0;
-                            priority[(next_instruction.seat_id + 1) % 3] = 1;
-                            roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, next_instruction.seat_id);
-                            for (let i = 0; i < 3; ++i) {
-                                set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key,
-                                    dealed_card, true, next_instruction.seat_id)
-                            }
-                            broadcast_information('dealed_card', {
-                                errcode: 0,
-                                dealed_card: dealed_card,
-                                op_seat_id: next_instruction.seat_id,
-                                ti_wei_pao_result: result,
-                                sessionKey: roomInfo.current_status.session_key,
-                            }, roomInfo.players);
+                            process_check_hu_stage_when_dealed(dealed_card, result, roomInfo);
                         }
                     }
                 }
 
-                next_instruction.type = 1;
-                next_instruction.seat_id = (next_instruction.seat_id + 1) % 3;
+
             }, action_delay);
         };
 
@@ -621,18 +656,22 @@ exports.start = function(conf, mgr){
             let highestPriorityPlayerId = roomManager.selectHighestPriorityWithoutGuo(roomInfo.current_status);
             console.log('sessionCheckout  ', roomInfo.current_status, highestPriorityPlayerId)
             if (highestPriorityPlayerId === null) {
-                if (roomInfo.current_status.op_card !== '') {
-                    // send discarded dealed card
-                    let players = roomInfo.players;
-                    broadcast_information('discarded_dealed_card', {
-                        errcode: 0,
-                        opCard: roomInfo.current_status.op_card,
-                        op_seat_id: roomInfo.current_status.dealed_seat_id,
-                    }, players);
-                    players[roomInfo.current_status.dealed_seat_id].cardsDiscarded.push(roomInfo.current_status.op_card);
+                if (roomInfo.current_status.isCheckHu === true) {
+                    process_check_to_dealed_card(roomInfo, roomInfo.current_status.op_card);
+                } else {
+                    if (roomInfo.current_status.op_card !== '') {
+                        // send discarded dealed card
+                        let players = roomInfo.players;
+                        broadcast_information('discarded_dealed_card', {
+                            errcode: 0,
+                            opCard: roomInfo.current_status.op_card,
+                            op_seat_id: roomInfo.current_status.dealed_seat_id,
+                        }, players);
+                        players[roomInfo.current_status.dealed_seat_id].cardsDiscarded.push(roomInfo.current_status.op_card);
 
+                    }
+                    process_to_next_instruction(roomInfo, roomManager);
                 }
-                process_to_next_instruction(roomInfo, roomManager);
                 return;
             }
             let other_player = roomManager.get_other_players(roomInfo.players[highestPriorityPlayerId].username, socket.room_id);

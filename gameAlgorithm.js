@@ -675,3 +675,45 @@ exports.check_ti_wei_pao = (op_seat_id, players, dealed_card) => {
         status: false,
     }
 };
+
+
+exports.check_ti_wei_when_dealed = (op_seat_id, players, dealed_card) => {
+    // console.log("check_ti_wei_pao  ", players);
+    if (players[op_seat_id].cardsOnHand.get(dealed_card) === 3) {
+        return {
+            status: true,
+            type: 'ti',
+            cards: ['back', 'back', 'back', dealed_card],
+            from_wei_or_peng: 0,
+            op_seat_id: op_seat_id,
+            opCard: dealed_card,
+        }
+    }
+    for (let usedCard of players[op_seat_id].cardsAlreadyUsed) {
+        if (usedCard.type === 'wei' && usedCard.cards[2] === dealed_card) {
+            return {
+                status: true,
+                type: 'ti',
+                cards: ['back', 'back', 'back', dealed_card],
+                from_wei_or_peng: 1,
+                op_seat_id: op_seat_id,
+                opCard: dealed_card,
+            }
+        }
+    }
+
+    if (players[op_seat_id].cardsOnHand.get(dealed_card) === 2) {
+        return {
+            status: true,
+            type: 'wei',
+            op_seat_id: op_seat_id,
+            from_wei_or_peng: 0,
+            opCard: dealed_card,
+            cards: ['back', 'back', dealed_card],
+        }
+    }
+
+    return {
+        status: false,
+    }
+};

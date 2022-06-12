@@ -57,6 +57,7 @@ exports.create_room = (username, rounds) => {
             numOfRequiredResponse: 0,
             op_card: '',
             dealed_seat_id: -1,
+            isCheckHu: false,
         },
         next_instruction: {
             seat_id: 0,
@@ -83,7 +84,7 @@ exports.create_room = (username, rounds) => {
     }
 };
 
-exports.init_new_session = (current_status, priority, numOfRequiredResponse, op_card = '', dealed_seat_id = -1) => {
+exports.init_new_session = (current_status, priority, numOfRequiredResponse, op_card = '', dealed_seat_id = -1, isCheckHu = false) => {
     current_status.session_key += 1;
     current_status.priority = priority;
     current_status.respondedUser = [null, null, null];
@@ -91,6 +92,7 @@ exports.init_new_session = (current_status, priority, numOfRequiredResponse, op_
     current_status.numOfRequiredResponse = numOfRequiredResponse;
     current_status.op_card = op_card; // will be set when the card is dealed.
     current_status.dealed_seat_id = dealed_seat_id; // will be set when the card is dealed.
+    current_status.isCheckHu = isCheckHu;
 };
 
 exports.clear_session = (current_status) => {
