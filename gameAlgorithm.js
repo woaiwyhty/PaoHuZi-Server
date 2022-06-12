@@ -519,7 +519,7 @@ let checkHuHelper = function(cardsOnHand, alreadyNeedJiang, currentXi, cardsAlre
         JSON.stringify(Array.from(cardsOnHand))
     ));
     let groupResult = [];
-    for (cardsUsed of cardsAlreadyUsed) {
+    for (let cardsUsed of cardsAlreadyUsed) {
         groupResult.push({
             type: cardsUsed.type,
             xi: cardsUsed.xi,
@@ -604,8 +604,21 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
     let tempCardSet = new Map(JSON.parse(
         JSON.stringify(Array.from(cardsOnHand))
     ));
+
     if (currentCard) {
-        tempCardSet.set(currentCard, tempCardSet.get(currentCard) + 1);
+        let found = false;
+        for (let usedCard of cardsAlreadyUsed) {
+            if (["peng", "wei"].indexOf(usedCard.type) >= 0 && usedCard.cards[2] === currentCard) {
+                usedCard.type = "pao";
+                usedCard.cards.push(currentCard);
+                usedCard.xi = exports.calculate_xi("pao", currentCard);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            tempCardSet.set(currentCard, tempCardSet.get(currentCard) + 1);
+        }
     }
     let sumOfCardOnHand = 0;
     for (const a of cardsOnHand.entries()) {
