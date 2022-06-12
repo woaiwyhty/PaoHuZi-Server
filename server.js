@@ -1143,6 +1143,7 @@ exports.start = function(conf, mgr){
                     }
                 }
                 if (cnt === 2) {
+                    console.log("all player offline, close all  ", roomInfo.players);
                     for (let i = 0; i < 3; ++i) {
                         clearTimer(roomInfo.players[i].operationTimer);
                         userSocketMap.delete(roomInfo.players[i].username);
