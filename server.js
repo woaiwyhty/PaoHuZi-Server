@@ -261,6 +261,7 @@ exports.start = function(conf, mgr){
         };
 
         let process_check_to_dealed_card = (roomInfo, dealed_card) => {
+            console.log("process_check_to_dealed_card  ");
             let result = gameAlgorithm.check_ti_wei_pao(roomInfo.next_instruction.seat_id, roomInfo.players, dealed_card);
             if (result.status === true) {
                 process_ti_wei_pao_to_client(roomInfo, result, dealed_card, true);

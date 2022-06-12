@@ -93,6 +93,7 @@ exports.init_new_session = (current_status, priority, numOfRequiredResponse, op_
     current_status.op_card = op_card; // will be set when the card is dealed.
     current_status.dealed_seat_id = dealed_seat_id; // will be set when the card is dealed.
     current_status.isCheckHu = isCheckHu;
+    console.log("init_new_session ", current_status);
 };
 
 exports.clear_session = (current_status) => {
