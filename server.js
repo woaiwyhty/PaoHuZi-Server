@@ -309,7 +309,7 @@ exports.start = function(conf, mgr){
                 console.log("process_dealed_card_ti_wei_pao before ", playerInfo.seat_id, playerInfo.cardsAlreadyUsed);
                 for (let cards of playerInfo.cardsAlreadyUsed) {
                     if (['wei', 'peng'].indexOf(cards.type) >= 0
-                        && cards.cards[2] === ti_wei_pao_result.cards[cards.length - 1]) {
+                        && cards.cards[2] === ti_wei_pao_result.cards[ti_wei_pao_result.cards.length - 1]) {
                         playerInfo.xi -= cards.xi;
                         cards.type = ti_wei_pao_result.type;
                         if (ti_wei_pao_result.type === "pao") {
