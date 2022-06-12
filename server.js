@@ -290,7 +290,7 @@ exports.start = function(conf, mgr){
             let priority = [2, 2, 2];
             priority[roomInfo.next_instruction.seat_id] = 0;
             priority[(roomInfo.next_instruction.seat_id + 1) % 3] = 1;
-            roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, roomInfo.next_instruction.seat_id, true);
+            roomManager.init_new_session(roomInfo.current_status, priority, 3, dealed_card, -1, true);
             broadcast_information('dealed_card_check_hu', {
                 errcode: 0,
                 dealed_card: dealed_card,
