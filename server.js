@@ -1145,7 +1145,7 @@ exports.start = function(conf, mgr){
                 if (cnt === 2) {
                     console.log("all player offline, close all  ", roomInfo.players);
                     for (let i = 0; i < 3; ++i) {
-                        clearTimer(roomInfo.players[i].operationTimer);
+                        clearTimer(roomInfo.players[i]);
                         userSocketMap.delete(roomInfo.players[i].username);
                         roomManager.leave_room(roomInfo.players[i].username, socket.room_id);
                     }
