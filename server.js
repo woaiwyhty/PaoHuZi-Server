@@ -33,6 +33,36 @@ exports.start = function(conf, mgr){
     gameAlgorithm.init_room_manager(roomManager);
     playerActionHandler.init(gameAlgorithm);
 
+    // let test = () => {
+    //     let cardsOnHand = new Map();
+    //     for (let i = 1; i <= 20; ++i) {
+    //         let key = 'x' + i.toString();
+    //         if (i > 10) {
+    //             key = 'd' + (i - 10).toString();
+    //         }
+    //         cardsOnHand.set(key, 0);
+    //     }
+    //
+    //     cardsOnHand.set("x2", 1);
+    //     cardsOnHand.set("x3", 2);
+    //     cardsOnHand.set("x5", 1);
+    //     cardsOnHand.set("x6", 1);
+    //     cardsOnHand.set("x7", 2);
+    //     cardsOnHand.set("x8", 2);
+    //     cardsOnHand.set("x9", 2);
+    //     cardsOnHand.set("x10", 2);
+    //     cardsOnHand.set("d1", 2);
+    //     cardsOnHand.set("d2", 1);
+    //     cardsOnHand.set("d6", 2);
+    //     cardsOnHand.set("d7", 1);
+    //     cardsOnHand.set("d10", 1);
+    //     let start = Date.now();
+    //     console.log(gameAlgorithm.checkHu([], cardsOnHand, 'x1'));
+    //     console.log("time consume  ", Date.now() - start);
+    // };
+    //
+    // test();
+
     httpServer.listen(config.CLEINT_PORT, config.HALL_IP, () => {
         console.log("listen on ", config.HALL_IP, config.CLEINT_PORT);
     });

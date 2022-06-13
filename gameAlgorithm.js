@@ -190,6 +190,29 @@ const chiMap = {
     'd8':  [['d6', 'd7', 'd8'], ['d7', 'd8', 'd9'], ['d8', 'd9', 'd10'], ['d8', 'd8', 'x8'], ['d8', 'x8', 'x8']] ,
     'd9':  [['d7', 'd8', 'd9'], ['d8', 'd9', 'd10'], ['d9', 'd9', 'x9'], ['d9', 'x9', 'x9']] ,
     'd10':  [['d8', 'd9', 'd10'], ['d10', 'd10', 'x10'], ['d10', 'x10', 'x10'], ['d2', 'd7', 'd10']] ,
+};
+
+const huChiMap = {
+    'x1':  [['x1', 'x2', 'x3'], ['x1', 'x1', 'd1'], ['x1', 'd1', 'd1']] ,
+    'x2':  [['x2', 'x3', 'x4'], ['x2', 'x2', 'd2'], ['x2', 'd2', 'd2'], ['x2', 'x7', 'x10']] ,
+    'x3':  [['x3', 'x4', 'x5'], ['x3', 'x3', 'd3'], ['x3', 'd3', 'd3']] ,
+    'x4':  [['x4', 'x5', 'x6'], ['x4', 'x4', 'd4'], ['x4', 'd4', 'd4']] ,
+    'x5':  [['x5', 'x6', 'x7'], ['x5', 'x5', 'd5'], ['x5', 'd5', 'd5']] ,
+    'x6':  [['x6', 'x7', 'x8'], ['x6', 'x6', 'd6'], ['x6', 'd6', 'd6']] ,
+    'x7':  [['x7', 'x8', 'x9'], ['x7', 'x7', 'd7'], ['x7', 'd7', 'd7']] ,
+    'x8':  [['x8', 'x9', 'x10'], ['x8', 'x8', 'd8'], ['x8', 'd8', 'd8']] ,
+    'x9':  [['x9', 'x9', 'd9'], ['x9', 'd9', 'd9']] ,
+    'x10':  [['x10', 'x10', 'd10'], ['x10', 'd10', 'd10']] ,
+    'd1':  [['d1', 'd2', 'd3'], ['d1', 'd1', 'x1'], ['d1', 'x1', 'x1']] ,
+    'd2':  [['d2', 'd3', 'd4'], ['d2', 'd2', 'x2'], ['d2', 'x2', 'x2'], ['d2', 'd7', 'd10']] ,
+    'd3':  [['d3', 'd4', 'd5'], ['d3', 'd3', 'x3'], ['d3', 'x3', 'x3']] ,
+    'd4':  [['d4', 'd5', 'd6'], ['d4', 'd4', 'x4'], ['d4', 'x4', 'x4']] ,
+    'd5':  [['d5', 'd6', 'd7'], ['d5', 'd5', 'x5'], ['d5', 'x5', 'x5']] ,
+    'd6':  [['d6', 'd7', 'd8'], ['d6', 'd6', 'x6'], ['d6', 'x6', 'x6']] ,
+    'd7':  [['d7', 'd8', 'd9'], ['d7', 'd7', 'x7'], ['d7', 'x7', 'x7']] ,
+    'd8':  [['d8', 'd9', 'd10'], ['d8', 'd8', 'x8'], ['d8', 'x8', 'x8']] ,
+    'd9':  [['d9', 'd9', 'x9'], ['d9', 'x9', 'x9']] ,
+    'd10':  [['d10', 'd10', 'x10'], ['d10', 'x10', 'x10']] ,
 }
 
 const cardRed = ['x2', 'x7', 'x10', 'd2', 'd7', 'd10'];
@@ -360,6 +383,7 @@ exports.checkChi = function(card, cardsOnHand) {
 }
 
 let groupCardsBy3Dfs = function(cardsOnHand, numOfCards, finalResult, currentResult) {
+    // console.log(currentResult);
     // cardsOnHand must have no jiang and no wei
     if (numOfCards < 3) {
         if (numOfCards === 0) {
@@ -379,7 +403,7 @@ let groupCardsBy3Dfs = function(cardsOnHand, numOfCards, finalResult, currentRes
         if (!chiMap[card]) {
             console.log('error   ', card, cardsOnHand);
         }
-        for (let possibility of chiMap[card]) {
+        for (let possibility of huChiMap[card]) {
             let result = true;
             for (let oneCard of possibility) {
                 cardsOnHand.set(oneCard, cardsOnHand.get(oneCard) - 1);
@@ -604,10 +628,17 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
     let tempCardSet = new Map(JSON.parse(
         JSON.stringify(Array.from(cardsOnHand))
     ));
-
+    let tempCardsAlreadyUsed = [];
+    for (let usedCard of cardsAlreadyUsed) {
+        tempCardsAlreadyUsed.push({
+            type: usedCard.type,
+            cards: Array.from(usedCard.cards),
+            xi: usedCard.xi,
+        })
+    }
     if (currentCard) {
         let found = false;
-        for (let usedCard of cardsAlreadyUsed) {
+        for (let usedCard of tempCardsAlreadyUsed) {
             if (["peng", "wei"].indexOf(usedCard.type) >= 0 && usedCard.cards[2] === currentCard) {
                 usedCard.type = "pao";
                 usedCard.cards.push(currentCard);
@@ -625,13 +656,13 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
         sumOfCardOnHand += a[1];
     }
     let currentXi = 0, needJiang = false;
-    for (let cardsUsed of cardsAlreadyUsed) {
+    for (let cardsUsed of tempCardsAlreadyUsed) {
         currentXi += cardsUsed.xi;
         if (['pao', 'ti'].indexOf(cardsUsed.type) >= 0) {
             needJiang = true;
         }
     }
-    let resultForJiangHu = checkHuHelper(tempCardSet, needJiang, currentXi, cardsAlreadyUsed);
+    let resultForJiangHu = checkHuHelper(tempCardSet, needJiang, currentXi, tempCardsAlreadyUsed);
     if (resultForJiangHu && sumOfCardOnHand === 1) {
         resultForJiangHu.huInfo.push("耍猴");
         resultForJiangHu.fan += 8;
