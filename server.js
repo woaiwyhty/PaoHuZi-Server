@@ -537,10 +537,14 @@ exports.start = function(conf, mgr){
                 holeCards: holeCards,
                 lastGame: roomInfo.current_played_games === roomInfo.total_games || !all_online,
             };
+            for (let i = 0; i < 3; ++i) {
+                clearTimer(roomInfo.players[i]);
+            }
             broadcast_information('other_player_hu', data, other_player);
             mysocket.emit('self_action_result', data);
             // roomInfo.in_game = false;
             roomInfo.number_of_wang = 0;
+
             if (roomInfo.current_played_games < roomInfo.total_games) {
                 if (all_online) {
                     let target = [roomInfo.players[roomInfo.last_join_seat_id]];
@@ -654,6 +658,9 @@ exports.start = function(conf, mgr){
                             nicknames: [roomInfo.players[0].nickname, roomInfo.players[1].nickname, roomInfo.players[2].nickname],
                         }, roomInfo.players);
                         roomInfo.number_of_wang += 1;
+                        for (let i = 0; i < 3; ++i) {
+                            clearTimer(roomInfo.players[i]);
+                        }
                         // roomInfo.in_game = false;
                         if (roomInfo.current_played_games < roomInfo.total_games) {
                             if (all_online) {
