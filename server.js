@@ -273,6 +273,7 @@ exports.start = function(conf, mgr){
                 ti_wei_pao_result: result,
                 xi: roomInfo.players[result.op_seat_id].xi,
                 hasPrevCheckHu: hasPrevCheckHu,
+                isLastCard: roomInfo.current_hole_cards_cursor === 80,
             }, roomInfo.players);
             setTimeout(() => {
                 if (roomInfo.game_state === 2) {
@@ -311,6 +312,7 @@ exports.start = function(conf, mgr){
                     ti_wei_pao_result: result,
                     sessionKey: roomInfo.current_status.session_key,
                     hasPrevCheckHu: true,
+                    isLastCard: roomInfo.current_hole_cards_cursor === 80,
                 }, roomInfo.players);
                 roomInfo.next_instruction.type = 1;
                 roomInfo.next_instruction.seat_id = (roomInfo.next_instruction.seat_id + 1) % 3;
@@ -327,6 +329,7 @@ exports.start = function(conf, mgr){
                 dealed_card: dealed_card,
                 op_seat_id: roomInfo.next_instruction.seat_id,
                 sessionKey: roomInfo.current_status.session_key,
+                isLastCard: roomInfo.current_hole_cards_cursor === 80,
             }, roomInfo.players);
             for (let i = 0; i < 3; ++i) {
                 set_guo_timer(roomInfo.players[i], roomInfo.current_status.session_key,
@@ -555,6 +558,8 @@ exports.start = function(conf, mgr){
                         }
                     }
                 }
+            } else {
+                roomInfo.game_state = 2;
             }
         };
 
@@ -667,6 +672,8 @@ exports.start = function(conf, mgr){
                                     }
                                 }
                             }
+                        } else {
+                            roomInfo.game_state = 2;
                         }
 
                     } else {
