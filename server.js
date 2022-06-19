@@ -43,21 +43,34 @@ exports.start = function(conf, mgr){
     //         cardsOnHand.set(key, 0);
     //     }
     //
-    //     cardsOnHand.set("x2", 1);
-    //     cardsOnHand.set("x3", 2);
-    //     cardsOnHand.set("x5", 1);
-    //     cardsOnHand.set("x6", 1);
-    //     cardsOnHand.set("x7", 2);
-    //     cardsOnHand.set("x8", 2);
-    //     cardsOnHand.set("x9", 2);
-    //     cardsOnHand.set("x10", 2);
-    //     cardsOnHand.set("d1", 2);
+    //     let cardsUsed = [
+    //         {
+    //             type: 'pao',
+    //             cards: ['d9', 'd9', 'd9', 'd9'],
+    //             xi: 9,
+    //         },
+    //         {
+    //             type: 'peng',
+    //             cards: ['x5', 'x5', 'x5'],
+    //             xi: 1,
+    //         },
+    //         {
+    //             type: 'peng',
+    //             cards: ['x7', 'x7', 'x7'],
+    //             xi: 1,
+    //         },
+    //     ]
+    //
+    //     cardsOnHand.set("x5", 2);
+    //     cardsOnHand.set("d8", 2);
+    //     cardsOnHand.set("x9", 1);
+    //     cardsOnHand.set("x8", 1);
+    //     cardsOnHand.set("x10", 1);
     //     cardsOnHand.set("d2", 1);
-    //     cardsOnHand.set("d6", 2);
     //     cardsOnHand.set("d7", 1);
     //     cardsOnHand.set("d10", 1);
     //     let start = Date.now();
-    //     console.log(gameAlgorithm.checkHu([], cardsOnHand, 'x1'));
+    //     console.log(gameAlgorithm.checkHu(cardsUsed, cardsOnHand, 'd5'));
     //     console.log("time consume  ", Date.now() - start);
     // };
     //

@@ -628,7 +628,7 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
     let tempCardSet = new Map(JSON.parse(
         JSON.stringify(Array.from(cardsOnHand))
     ));
-    let tempCardsAlreadyUsed = [];
+    let tempCardsAlreadyUsed = [], resultWithPao;
     for (let usedCard of cardsAlreadyUsed) {
         tempCardsAlreadyUsed.push({
             type: usedCard.type,
@@ -647,27 +647,34 @@ exports.checkHu = function(cardsAlreadyUsed, cardsOnHand, currentCard) {
                 break;
             }
         }
-        if (!found) {
-            tempCardSet.set(currentCard, tempCardSet.get(currentCard) + 1);
+        if (found) {
+            resultWithPao = exports.checkHu(tempCardsAlreadyUsed, tempCardSet);
         }
+        tempCardSet.set(currentCard, tempCardSet.get(currentCard) + 1);
     }
     let sumOfCardOnHand = 0;
     for (const a of cardsOnHand.entries()) {
         sumOfCardOnHand += a[1];
     }
     let currentXi = 0, needJiang = false;
-    for (let cardsUsed of tempCardsAlreadyUsed) {
+    for (let cardsUsed of cardsAlreadyUsed) {
         currentXi += cardsUsed.xi;
         if (['pao', 'ti'].indexOf(cardsUsed.type) >= 0) {
             needJiang = true;
         }
     }
-    let resultForJiangHu = checkHuHelper(tempCardSet, needJiang, currentXi, tempCardsAlreadyUsed);
-    if (resultForJiangHu && sumOfCardOnHand === 1) {
+    let resultForJiangHu = checkHuHelper(tempCardSet, needJiang, currentXi, cardsAlreadyUsed);
+    if (resultWithPao && resultWithPao.status === true) {
+        if (!resultForJiangHu || resultForJiangHu.status === false ||
+            resultWithPao.fan * resultWithPao.tun > resultForJiangHu.fan * resultForJiangHu.tun) {
+            resultForJiangHu = resultWithPao;
+        }
+    }
+    if (resultForJiangHu && sumOfCardOnHand === 1 && resultForJiangHu.status === true) {
         resultForJiangHu.huInfo.push("耍猴");
         resultForJiangHu.fan += 8;
     }
-    console.log('check hu end   ', resultForJiangHu);
+    // console.log('check hu end   ', resultForJiangHu);
     return resultForJiangHu;
 }
 
