@@ -45,32 +45,38 @@ exports.start = function(conf, mgr){
     //
     //     let cardsUsed = [
     //         {
+    //             type: 'ti',
+    //             cards: ['d6', 'd6', 'd6', 'd6'],
+    //             xi: 12,
+    //         },
+    //         {
+    //             type: 'chi',
+    //             cards: ['x1', 'x2', 'x3'],
+    //             xi: 3,
+    //         },
+    //         {
+    //             type: 'peng',
+    //             cards: ['d4', 'd4', 'd4'],
+    //             xi: 3,
+    //         },
+    //         {
     //             type: 'pao',
     //             cards: ['d9', 'd9', 'd9', 'd9'],
     //             xi: 9,
     //         },
     //         {
-    //             type: 'peng',
-    //             cards: ['x5', 'x5', 'x5'],
-    //             xi: 1,
-    //         },
-    //         {
-    //             type: 'peng',
-    //             cards: ['x7', 'x7', 'x7'],
-    //             xi: 1,
+    //             type: 'pao',
+    //             cards: ['x10', 'x10', 'x10', 'x10'],
+    //             xi: 6,
     //         },
     //     ]
     //
-    //     cardsOnHand.set("x5", 2);
-    //     cardsOnHand.set("d8", 2);
-    //     cardsOnHand.set("x9", 1);
-    //     cardsOnHand.set("x8", 1);
-    //     cardsOnHand.set("x10", 1);
+    //     cardsOnHand.set("d7", 2);
     //     cardsOnHand.set("d2", 1);
-    //     cardsOnHand.set("d7", 1);
     //     cardsOnHand.set("d10", 1);
+    //
     //     let start = Date.now();
-    //     console.log(gameAlgorithm.checkHu(cardsUsed, cardsOnHand, 'd5'));
+    //     console.log(gameAlgorithm.checkHu(cardsUsed, cardsOnHand, 'd7'));
     //     console.log("time consume  ", Date.now() - start);
     // };
     //
@@ -84,6 +90,36 @@ exports.start = function(conf, mgr){
         console.log(req.query);
         httpHandler.send(res, 0, "ok", {});
     });
+
+    app.get('/roomExists',
+        [
+            query('username').exists(),
+            query('username').isLength({ min: 6, max: 20 }),
+            query('token').exists(),
+            query('token').isLength({ min: 15, max: 30 }),
+            query('room_id').exists(),
+            query('room_id').isInt({ min: 10000, max: 99999 }),
+        ],
+        function(req, res){
+            try {
+                validationResult(req).throw();
+                if (!accountManager.validate_online(req.query.username, req.query.token)) {
+                    throw new Error('invalid token');
+                }
+                let room_id = parseInt(req.query.room_id);
+                let result = roomManager.check_room_exists(room_id);
+                if (result) {
+                    httpHandler.send(res, 0, "ok", {});
+                } else {
+                    httpHandler.send(res, -1, "not exists", {});
+                }
+
+            } catch (error) {
+                console.log(error);
+                httpHandler.send(res, -1, error.message, {});
+            }
+        }
+    );
 
     app.get('/createRoom',
         [
@@ -402,6 +438,11 @@ exports.start = function(conf, mgr){
             if (!accountManager.validate_online(data.username, data.token)) {
                 socket.emit('login_result', { errcode: -1, errmsg: "user not online" });
                 return;
+            }
+            if (!roomManager.check_room_exists(parseInt(data.room_id))) {
+                socket.emit('login_result', { errcode: -1, errmsg: "room not existed" });
+                return;
+
             }
 
             let nickname = accountManager.get_nick_name(data.username);
