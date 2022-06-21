@@ -323,6 +323,8 @@ exports.start = function(conf, mgr){
                 roomManager.init_new_session(roomInfo.current_status, priority,
                     1, dealed_card, roomInfo.next_instruction.seat_id, true);
                 sessionKey = roomInfo.current_status.session_key;
+                set_guo_timer(roomInfo.players[result.op_seat_id], roomInfo.current_status.session_key,
+                    dealed_card, true, roomInfo.next_instruction.seat_id, true);
             }
             broadcast_information('dealed_card', {
                 errcode: 0,
