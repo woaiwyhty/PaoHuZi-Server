@@ -316,6 +316,14 @@ exports.start = function(conf, mgr){
         let process_ti_wei_pao_to_client = (roomInfo, result, dealed_card, hasPrevCheckHu) => {
             console.log("process_ti_wei_pao_to_client  ");
             process_dealed_card_ti_wei_pao(roomInfo.players[result.op_seat_id], result);
+            let sessionKey = null;
+            if (result.status === true && ['ti', 'wei'].indexOf(result.type) >= 0) {
+                // need to check hu
+                let priority = [2, 2, 2];
+                roomManager.init_new_session(roomInfo.current_status, priority,
+                    1, dealed_card, roomInfo.next_instruction.seat_id, true);
+                sessionKey = roomInfo.current_status.session_key;
+            }
             broadcast_information('dealed_card', {
                 errcode: 0,
                 dealed_card: dealed_card,
@@ -324,6 +332,7 @@ exports.start = function(conf, mgr){
                 xi: roomInfo.players[result.op_seat_id].xi,
                 hasPrevCheckHu: hasPrevCheckHu,
                 isLastCard: roomInfo.current_hole_cards_cursor === 80,
+                sessionKey: sessionKey,
             }, roomInfo.players);
             setTimeout(() => {
                 if (roomInfo.game_state === 2) {
@@ -337,7 +346,9 @@ exports.start = function(conf, mgr){
                     roomInfo.next_instruction.seat_id = (result.op_seat_id + 1) % 3;
                     roomInfo.next_instruction.type = 1; // deal a card
                 }
-                process_to_next_instruction(roomInfo, roomManager);
+                if (sessionKey === null) {
+                    process_to_next_instruction(roomInfo, roomManager);
+                }
             }, action_delay);
         };
 
@@ -607,7 +618,7 @@ exports.start = function(conf, mgr){
                         broadcast_information('askGameReady', {
                             errcode: 0,
                         }, target);
-                    }, 5000)
+                    }, 10000)
                 } else {
                     roomInfo.game_state = 2;
                     for (let i = 0; i < 3; ++i) {
@@ -725,7 +736,7 @@ exports.start = function(conf, mgr){
                                     broadcast_information('askGameReady', {
                                         errcode: 0,
                                     }, target);
-                                }, 5000)
+                                }, 10000)
                             } else {
                                 roomInfo.game_state = 2;
                                 for (let i = 0; i < 3; ++i) {
@@ -761,7 +772,12 @@ exports.start = function(conf, mgr){
             console.log('sessionCheckout  ', roomInfo.current_status, highestPriorityPlayerId)
             if (highestPriorityPlayerId === null) {
                 if (roomInfo.current_status.isCheckHu === true) {
-                    process_check_to_dealed_card(roomInfo, roomInfo.current_status.op_card);
+                    if (roomInfo.current_status.numOfRequiredResponse === 1) {
+                        // ti wei check
+                        process_to_next_instruction(roomInfo, roomManager);
+                    } else {
+                        process_check_to_dealed_card(roomInfo, roomInfo.current_status.op_card);
+                    }
                 } else {
                     if (roomInfo.current_status.op_card !== '') {
                         // send discarded dealed card
